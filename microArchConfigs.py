@@ -7,7 +7,8 @@ class MicroArchConfig:
                 preDecodeWidth=5, preDecodeBlockSize=16, predecodeDecodeDelay=3, issueDispatchDelay=5, DSB_MS_Stall=4, pop5CEndsDecodeGroup=True,
                 high8RenamedSeparately=True, movzxHigh8AliasCanBeEliminated=True, moveEliminationPipelineLength=2, moveEliminationGPRSlots=4,
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
-                slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False):
+                slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
+                storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -40,6 +41,16 @@ class MicroArchConfig:
       self.slow256BitMemAcc = slow256BitMemAcc # 256-bit memory load/store uops block the load/store units twice
       self.DSBBlockSize = DSBBlockSize
       self.simplePortAssignment = simplePortAssignment # assign ports with equal probability
+      # Experimental AMD support: only the back end is modeled. The front end is reduced to a dispatch-width limit (in macro-ops), uops are
+      # assigned to the least-loaded applicable port, and ports are named with single letters (see portNames).
+      self.isAMD = isAMD
+      self.loadPorts = loadPorts # ports with load AGUs; a uop on one of these ports is a load (or, if there is a store-data uop without address uop, a store-address) uop
+      self.storeAddrPorts = storeAddrPorts # ports that can only be used by store-address uops
+      self.storeDataPorts = storeDataPorts # ports used by store-data uops
+      self.fusiblePorts = fusiblePorts # a uop on one of these ports can be micro-fused with the next uop of the instruction
+      self.dividerPort = dividerPort # port that is connected to the divider
+      self.loadLatency = loadLatency # latency of a load uop
+      self.portNames = portNames or {} # display names for ports, e.g., {'a': 'ALU0'}
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
 
@@ -189,3 +200,38 @@ MicroArchConfigs['CLX_SimplePorts_noMoveElim'] = copy.deepcopy(MicroArchConfigs[
 MicroArchConfigs['CLX_SimplePorts_noMoveElim'].simplePortAssignment = True
 MicroArchConfigs['CLX_SimplePorts_noMoveElim'].moveEliminationGPRSlots = 0
 MicroArchConfigs['CLX_SimplePorts_noMoveElim'].moveEliminationSIMDSlots = 0
+
+# Experimental: AMD Zen 3 (family 19h). Back end only; see the comments at 'isAMD' above.
+# Sources: AMD Software Optimization Guide for Family 19h Processors (SOG 19h) as cited in LLVM's X86ScheduleZnver3.td, and measurements on
+# a Ryzen 7 7735U (Zen 3+).
+#   ALU0-3 = a-d (ALU0: divider; ALU1: multiplier; ALU0 and ALU3: branches, see convertXML.py), AGU0-2 = g-i, integer store data = s,t
+#   (at most two stores per cycle), FP0-5 = k-p, FP store data = x
+MicroArchConfigs['ZEN3'] = MicroArchConfig(
+   name = 'ZEN3',
+   XEDName = 'AMD_FUTURE', # the XED version used here has no chip definition for Zen 3
+   IQWidth = 25, # not used (no front-end model)
+   DSBWidth = 8, # not used (no front-end model)
+   IDQWidth = 64, # not used (no front-end model)
+   issueWidth = 6, # macro-ops dispatched per cycle (SOG 19h, 2.9.6; confirmed by measurement)
+   RBWidth = 256, # SOG 19h, 2.10.3
+   RSWidth = 160, # 4x24 integer + 2x32 FP scheduler entries; modeled as one pool
+   retireWidth = 8, # SOG 19h, 2.10.3
+   pop5CRequiresComplexDecoder = False,
+   pop5CEndsDecodeGroup = False,
+   macroFusibleInstrCanBeDecodedAsLastInstr = True,
+   branchCanBeLastInstrInCachedBlock = True,
+   high8RenamedSeparately = False,
+   moveEliminationGPRSlots = 'unlimited',
+   moveEliminationSIMDSlots = 'unlimited',
+   LSDEnabled = False,
+   fastPointerChasing = False,
+   isAMD = True,
+   loadPorts = 'ghi',
+   storeAddrPorts = '',
+   storeDataPorts = 'stx',
+   fusiblePorts = 'ghi',
+   dividerPort = 'a',
+   loadLatency = 4, # SOG 19h, 2.12 (integer loads)
+   portNames = {'a': 'ALU0', 'b': 'ALU1', 'c': 'ALU2', 'd': 'ALU3', 'g': 'AGU0', 'h': 'AGU1', 'i': 'AGU2', 's': 'SD0', 't': 'SD1',
+                'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt'},
+)

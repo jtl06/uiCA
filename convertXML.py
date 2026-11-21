@@ -9,6 +9,111 @@ from microArchConfigs import MicroArchConfigs
 
 allXmlAttributes = ['agen', 'bcast', 'eosz', 'high8', 'immzero', 'mask', 'rep', 'rm', 'sae', 'zeroing']
 
+# Experimental AMD support.
+# uops.info has no port data for integer instructions on AMD CPUs (there are no suitable performance counters), and its uop counts are in
+# macro-ops. We therefore synthesize the uops: load/store uops are derived from the operands, FP uops are taken from uops.info, and the
+# remaining uops are assigned to a group of ALUs according to the tables below. The tables follow LLVM's X86ScheduleZnver3.td, which is based on
+# AMD's Software Optimization Guide for Family 19h (section 2.10.2).
+AMD_ALU = 'abcd'       # ALU0-3
+AMD_AGU = 'ghi'        # AGU0-2
+AMD_STORE_DATA = 'st'  # integer store data; two stores per cycle
+AMD_FP_STORE_DATA = 'x'
+AMD_FP_PORTS = {'0': 'k', '1': 'l', '2': 'm', '3': 'n', '4': 'o', '5': 'p'}
+# Branches: the second branch unit (BRU1) is attached to the scheduler of ALU3. Measurements on a Ryzen 7 7735U show that it does not add
+# capacity (K independent adds + dec/jnz run at (K+1)/4 cycles per iteration, 3x test/jnz + dec/jnz at 2), so branches are modeled as uops
+# for ALU0 or ALU3.
+AMD_PORTS_FOR_CATEGORY = {'COND_BR': 'ad', 'UNCOND_BR': 'ad', 'CALL': 'ad', 'RET': 'ad',
+                          'SHIFT': 'bc', 'ROTATE': 'bc', 'CMOV': 'ad', 'SETCC': 'ad'}
+AMD_PORTS_FOR_ICLASS = {'IMUL': 'b', 'MUL': 'b', 'MULX': 'b', 'DIV': 'a', 'IDIV': 'a', 'BSF': 'b', 'BSR': 'b', 'PDEP': 'b', 'PEXT': 'b', 'CRC32': 'b',
+                        'BT': 'bc', 'BTC': 'bc', 'BTR': 'bc', 'BTS': 'bc', 'BEXTR': 'bc', 'BZHI': 'bc', 'TZCNT': 'bc', 'SHLD': 'bc', 'SHRD': 'bc',
+                        'SARX': 'bc', 'SHLX': 'bc', 'SHRX': 'bc', 'RORX': 'bc', 'LAHF': 'd'}
+# Measured on a Ryzen 7 7735U (Zen 3+): the register/immediate forms of these instructions are fused with a subsequent jnz. We assume that
+# this holds for all conditional jumps; forms with memory operands were not measured and are treated as not fusible.
+AMD_MACRO_FUSIBLE_ICLASSES = ['CMP', 'TEST', 'ADD', 'SUB', 'AND', 'OR', 'XOR', 'INC', 'DEC']
+amdStats = defaultdict(lambda: defaultdict(int))
+amdTPMismatches = defaultdict(list)
+
+def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
+   iclass = XMLInstr.attrib['iclass']
+   category = XMLInstr.attrib['category']
+   instrString = XMLInstr.attrib['string']
+   macroOps = max(1, int(measurementNode.attrib['uops']))
+
+   memOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('type') == 'mem']
+   memR = any('r' in o.attrib.get('r', '') + o.attrib.get('rw', '') or o.attrib.get('r') == '1' for o in memOps)
+   memW = any('w' in o.attrib.get('w', '') + o.attrib.get('rw', '') or o.attrib.get('w') == '1' for o in memOps)
+   regOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('type') == 'reg']
+   usesVecRegs = any(('MM' in (o.text or '')) for o in regOps)
+   nonSuppressedOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('suppressed', '0') != '1' and o.attrib.get('type') != 'flags']
+
+   latCycles = [int(l.attrib[a]) for l in measurementNode.iter('latency') for a in ['cycles', 'min_cycles'] if a in l.attrib]
+   addrLat = [int(l.attrib['cycles_addr']) for l in measurementNode.iter('latency') if 'cycles_addr' in l.attrib]
+
+   fpPcs = []
+   ports = measurementNode.attrib.get('ports')
+   if ports is not None:
+      for np in ports.split('+'):
+         n, p = np.split('*')
+         fpPcs.extend([''.join(AMD_FP_PORTS[c] for c in p.replace('FP', ''))] * int(n))
+
+   nLoad = int(memR)
+   nStore = int(memW)
+   fpStore = False
+   if memW and (''.join(AMD_FP_PORTS[c] for c in '45') in fpPcs):
+      # the store-data uop of a vector store; only one such uop can be executed per cycle
+      fpPcs.remove(''.join(AMD_FP_PORTS[c] for c in '45'))
+      fpStore = True
+
+   # number of uops that are neither load, store, nor FP uops
+   if fpPcs or fpStore:
+      nALU = max(0, macroOps - len(fpPcs) - int(fpStore))
+   elif not memOps:
+      nALU = macroOps
+   elif memR and memW:
+      nALU = macroOps
+   elif memR:
+      isPureLoad = usesVecRegs or (category in ['DATAXFER', 'POP']) or (addrLat and min(addrLat) <= loadLatency)
+      nALU = (macroOps - 1) if isPureLoad else macroOps
+   else:
+      isPureStore = (category in ['DATAXFER', 'PUSH'])
+      nALU = (macroOps - 1) if (isPureStore or macroOps > 1) else macroOps
+   if category in ['NOP', 'WIDENOP']:
+      nALU = 0
+
+   aluPorts = AMD_PORTS_FOR_ICLASS.get(iclass, AMD_PORTS_FOR_CATEGORY.get(category, AMD_ALU))
+   aluPcs = ([aluPorts] + [AMD_ALU] * (nALU - 1)) if nALU else []
+   if iclass in ['DIV', 'IDIV']:
+      aluPcs = [aluPorts] * nALU
+
+   portData = {}
+   for pc in [AMD_AGU] * (nLoad + nStore) + ([AMD_FP_STORE_DATA if (fpStore or usesVecRegs) else AMD_STORE_DATA] * nStore) + aluPcs + fpPcs:
+      portData[pc] = portData.get(pc, 0) + 1
+
+   perfData = {'uops': sum(portData.values()), 'retSlots': macroOps, 'uopsMITE': macroOps, 'uopsMS': 0, 'ports': portData}
+
+   isRegMove = (('MOV' in instrString) and (not memOps) and (macroOps == 1) and (len(nonSuppressedOps) == 2) and latCycles and (max(latCycles) == 0)
+                   and all(o.attrib.get('type') == 'reg' for o in nonSuppressedOps))
+   if isRegMove:
+      # eliminated at rename; the '_SR' variants are used if the move cannot be eliminated (see instructions.py)
+      perfData.update({'uops': 0, 'ports': {}, 'uops_SR': 1, 'ports_SR': portData})
+
+   if 'div_cycles' in measurementNode.attrib:
+      perfData['divC'] = int(measurementNode.attrib['div_cycles'])
+
+   # statistics, and comparison with the measured throughput for instructions with one uop
+   s = amdStats[arch]
+   s['instructions'] += 1
+   s['FP ports from uops.info' if (fpPcs or fpStore) else ('synthesized (table)' if aluPorts != AMD_ALU else 'synthesized (default ALU)') if nALU
+     else 'load/store/eliminated only'] += 1
+   TPs = [float(measurementNode.attrib[a]) for a in ['TP_unrolled', 'TP_loop'] if a in measurementNode.attrib]
+   if TPs and (not memOps) and (len(aluPcs) == 1) and (not fpPcs) and (category not in ['COND_BR', 'UNCOND_BR', 'CALL', 'RET']):
+      s['single-uop ALU instr. with measured TP'] += 1
+      if abs(min(TPs) - 1.0/len(aluPorts)) > 0.13:
+         s['... of which measured TP disagrees with port group size'] += 1
+         amdTPMismatches[arch].append((instrString, min(TPs), aluPorts))
+   return perfData
+
+
 def main():
    parser = argparse.ArgumentParser(description='Convert XML file')
    parser.add_argument('xmlfile', help="XML file")
@@ -20,6 +125,8 @@ def main():
    perfDataForArchIdxDict = defaultdict(dict)
    attrDataForArch = defaultdict(list)
    attrDataForArchIdxDict = defaultdict(dict)
+   condJumps = set(XMLInstr.attrib['string'] for XMLInstr in root.iter('instruction')
+                      if XMLInstr.attrib['category'] == 'COND_BR' and XMLInstr.attrib['iclass'].startswith('J') and 'CXZ' not in XMLInstr.attrib['iclass'])
    for XMLInstr in root.iter('instruction'):
       iform = XMLInstr.attrib['iform']
       instrString = XMLInstr.attrib['string']
@@ -65,7 +172,10 @@ def main():
                instrData['flagsW'] = writtenFlags
 
             perfData = {}
-            for mSuffix, iSuffix in [('', ''), ('_same_reg', '_SR'), ('_indexed', '_I')]:
+            isAMD = MicroArchConfigs[archNode.attrib['name']].isAMD
+            if isAMD:
+               perfData = getAMDPerfData(archNode.attrib['name'], XMLInstr, measurementNode, MicroArchConfigs[archNode.attrib['name']].loadLatency)
+            for mSuffix, iSuffix in ([] if isAMD else [('', ''), ('_same_reg', '_SR'), ('_indexed', '_I')]):
                for mKey, iKey in [('uops', 'uops'), ('uops_retire_slots', 'retSlots'), ('uops_MITE', 'uopsMITE'), ('uops_MS', 'uopsMS'),
                                   ('div_cycles', 'divC'), ('complex_decoder', 'complDec'), ('available_simple_decoders', 'sDec')]:
                   if mKey == 'div_cycles' and mKey+mSuffix in measurementNode.attrib:
@@ -101,6 +211,9 @@ def main():
             macroFusible = measurementNode.attrib.get('macro_fusible')
             if macroFusible is not None:
                instrData['macroFusible'] = set(macroFusible.split(';'))
+            if (isAMD and (XMLInstr.attrib['iclass'] in AMD_MACRO_FUSIBLE_ICLASSES)
+                  and not any(o.attrib.get('type') == 'mem' for o in XMLInstr.iter('operand'))):
+               instrData['macroFusible'] = condJumps
 
             latData = dict()
             latDataSameReg = dict()
@@ -158,6 +271,15 @@ def main():
    with open(os.path.join(path, 'uArchInfo.py'), 'w') as f:
       f.write('allPorts = ' + repr(allPorts) + '\n')
       f.write('ALUPorts = ' + repr(ALUPorts) + '\n')
+
+
+   for arch in sorted(amdStats):
+      print(arch + ' (experimental):')
+      for k, v in amdStats[arch].items():
+         print('   {}: {}'.format(k, v))
+      with open(os.path.join(path, arch + '_TP_mismatches.txt'), 'w') as f:
+         for instrString, TP, ports in sorted(amdTPMismatches[arch]):
+            f.write('{}\tmeasured TP: {}\tassigned ports: {}\n'.format(instrString, TP, ports))
 
 
 if __name__ == "__main__":

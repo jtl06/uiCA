@@ -301,6 +301,16 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
             if prevInstr.uops == 0: #ToDo: is this necessary?
                prevInstr.uops = instruction.uops
                prevInstr.portData = instruction.portData
+            elif uArchConfig.isAMD:
+               # the fused uop is executed by a branch unit
+               prevInstr.portData = dict(prevInstr.portData)
+               for p, u in list(prevInstr.portData.items()):
+                  if not any((port in uArchConfig.loadPorts + uArchConfig.storeDataPorts) for port in p):
+                     del prevInstr.portData[p]
+                     if u > 1:
+                        prevInstr.portData[p] = u - 1
+                     prevInstr.portData[instrPorts] = prevInstr.portData.get(instrPorts, 0) + 1
+                     break
             else:
                prevInstr.portData = dict(prevInstr.portData) # create copy so that the port usage of other instructions of the same type is not modified
                for p, u in list(prevInstr.portData.items()):

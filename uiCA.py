@@ -4,6 +4,7 @@ import argparse
 import importlib
 import os
 import re
+import sys
 from collections import Counter, deque, namedtuple, OrderedDict
 from concurrent import futures
 from heapq import heappop, heappush
@@ -119,6 +120,15 @@ class RenamedOperand:
 
    def getReadyCycle(self):
       if self.__ready is not None:
+         return self.__ready
+
+      if self.uop.instrI.uArchConfig.isAMD and self.uop.prop.isLoadUop and (self.uop.storeBufferEntry is not None):
+         # Memory renaming: a load from an address that was just written with the same addressing expression gets its value directly from the
+         # register that was stored (measured on Zen 3+: 'mov [rsi], rax; mov rax, [rsi]; add rax, 1' runs at 1 cycle per iteration).
+         readyCycles = [op.getReadyCycle() for u in self.uop.storeBufferEntry.uops if u.prop.isStoreDataUop for op in u.renamedInputOperands]
+         if any((r is None) for r in readyCycles):
+            return None
+         self.__ready = max(readyCycles + [self.uop.fusedUop.issued or 0])
          return self.__ready
 
       if self.uop.dispatched is None:
@@ -432,6 +442,11 @@ class FrontEnd:
                self.allGeneratedInstrInstances.append(instrI)
                for lamUop in instrI.uops:
                   self.addStackSyncUop(clock, lamUop.getUnfusedUops()[0])
+                  if self.uArchConfig.isAMD:
+                     # the dispatch width is in macro-ops
+                     self.IDQ.append(lamUop)
+                     lamUop.addedToIDQ = clock
+                     continue
                   for uop in lamUop.getUnfusedUops():
                      self.IDQ.append(LaminatedUop([FusedUop([uop])]))
       elif self.uopSource == 'LSD':
@@ -822,6 +837,8 @@ class Scheduler:
       self.uopsDispatchedInPrevCycle = [] # the port usage counter is decreased one cycle after uops are dispatched
       self.readyQueue = {p:[] for p in allPorts[self.uArchConfig.name]}
       self.readyDivUops = []
+      self.portLastAssigned = {p:-1 for p in allPorts[self.uArchConfig.name]} # used as a tie-breaker on AMD CPUs
+      self.nPortsAssigned = 0
       self.uopsReadyInCycle = {}
       self.nonReadyUops = [] # uops not yet added to uopsReadyInCycle (in order)
       self.pendingUops = set() # dispatched, but not finished uops
@@ -876,8 +893,8 @@ class Scheduler:
       uopsDispatched = []
       for port in applicablePorts:
          queue = self.readyQueue[port]
-         if (port == '0' and (not self.blockedResources['div']) and self.readyDivUops
-               and ((not self.readyQueue['0']) or self.readyDivUops[0][0] < self.readyQueue['0'][0][0])):
+         if (port == self.uArchConfig.dividerPort and (not self.blockedResources['div']) and self.readyDivUops
+               and ((not self.readyQueue[port]) or self.readyDivUops[0][0] < self.readyQueue[port][0][0])):
             queue = self.readyDivUops
          if self.blockedResources.get('port' + port):
             continue
@@ -1003,6 +1020,11 @@ class Scheduler:
                port = uop.prop.possiblePorts[0]
             elif self.uArchConfig.simplePortAssignment:
                port = random.choice(uop.prop.possiblePorts)
+            elif self.uArchConfig.isAMD:
+               # least-loaded applicable port; ties are broken in favor of the port that was not used for the longest time
+               port = min(uop.prop.possiblePorts, key=lambda p: (self.portUsage[p], self.portLastAssigned[p]))
+               self.nPortsAssigned += 1
+               self.portLastAssigned[port] = self.nPortsAssigned
             elif len(allPorts[self.uArchConfig.name]) == 10:
                applicablePortUsages = [(p,u) for p, u in self.portUsageAtStartOfCycle.get(clock-1, self.portUsageAtStartOfCycle[clock]).items()
                                        if p in uop.prop.possiblePorts]
@@ -1137,7 +1159,7 @@ def adjustLatenciesAndAddMergeUops(instructions: List[Instr], uArchConfig: Micro
          processInstrRegOutputs(instr)
 
 
-def computeUopProperties(instructions: List[Instr]):
+def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig):
    for instr in instructions:
       if instr.macroFusedWithPrevInstr:
          continue
@@ -1148,11 +1170,11 @@ def computeUopProperties(instructions: List[Instr]):
       nonMemPcs = []
       for pc, n in instr.portData.items():
          ports = list(pc)
-         if any ((p in ports) for p in ['7', '8']):
+         if any ((p in ports) for p in uArchConfig.storeAddrPorts):
             storeAddressPcs.extend([ports]*n)
-         elif any((p in ports) for p in ['2', '3']):
+         elif any((p in ports) for p in uArchConfig.loadPorts):
             loadPcs.extend([ports]*n)
-         elif any((p in ports) for p in ['4', '9']):
+         elif any((p in ports) for p in uArchConfig.storeDataPorts):
             storeDataPcs.extend([ports]*n)
          else:
             nonMemPcs.extend([ports]*n)
@@ -1182,7 +1204,12 @@ def computeUopProperties(instructions: List[Instr]):
          memAddr = None
          if instr.inputMemOperands:
             memAddr = instr.inputMemOperands[min(i, len(instr.inputMemOperands) - 1)].memAddr
-         uopLatencies = {outOp: 5 for outOp in outputOperands} # ToDo: actual latencies
+         uopLatencies = {outOp: uArchConfig.loadLatency for outOp in outputOperands} # ToDo: actual latencies
+         if uArchConfig.isAMD and (not nonMemPcs):
+            # e.g., vector loads have a higher latency than integer loads
+            for outOp in outputOperands:
+               uopLatencies[outOp] = max([instr.latencies[(a, outOp)] for a in instr.memAddrOperands if (a, outOp) in instr.latencies]
+                                         or [uArchConfig.loadLatency])
          loadUopProps.append(UopProperties(instr, pc, inputOperands, outputOperands, uopLatencies, isLoadUop=True, memAddr=memAddr))
 
       for i, (stAPc, stDPc) in enumerate(zip(storeAddressPcs, storeDataPcs)):
@@ -1231,11 +1258,11 @@ def computeUopProperties(instructions: List[Instr]):
             for inMemAddrOp in (instr.memAddrOperands if (not instr.agenOperands) else []):
                for loadPseudoOp in loadPseudoOps:
                   for outOp in instr.outputRegOperands + instr.outputFlagOperands:
-                     adjustedLatencies[(loadPseudoOp, outOp)] = max(1, instr.latencies.get((inMemAddrOp, outOp), 1) - 5) #ToDo
+                     adjustedLatencies[(loadPseudoOp, outOp)] = max(1, instr.latencies.get((inMemAddrOp, outOp), 1) - uArchConfig.loadLatency) #ToDo
             for inMemOp in instr.inputMemOperands:
                for loadPseudoOp in loadPseudoOps:
                   for storePseudoOp in storePseudoOps:
-                     adjustedLatencies[(loadPseudoOp, storePseudoOp)] = max([max(1, instr.latencies.get((inMemOp, outMemOp), 1) - 5)
+                     adjustedLatencies[(loadPseudoOp, storePseudoOp)] = max([max(1, instr.latencies.get((inMemOp, outMemOp), 1) - uArchConfig.loadLatency)
                                                                               for outMemOp in instr.outputMemOperands] or [1]) # ToDo
 
             latClasses = {} # maps latencies to inputs with these latencies
@@ -1283,6 +1310,8 @@ def computeUopProperties(instructions: List[Instr]):
 
 
 class InstrInstance:
+   uArchConfig: Optional[MicroArchConfig] = None # set by runSimulation
+
    def __init__(self, instr, address, rnd):
       self.instr = instr
       self.address = address
@@ -1303,7 +1332,7 @@ class InstrInstance:
       fusedDomainUops = deque()
       for i in range(0, self.instr.retireSlots-1):
          uop = unfusedDomainUops.popleft()
-         if (uop.prop.possiblePorts and any(p in ['2', '3', '7'] for p in uop.prop.possiblePorts)
+         if (uop.prop.possiblePorts and any(p in self.uArchConfig.fusiblePorts for p in uop.prop.possiblePorts)
                and len(unfusedDomainUops) >= self.instr.retireSlots - i):
             fusedDomainUops.append(FusedUop([uop, unfusedDomainUops.popleft()]))
          else:
@@ -1315,7 +1344,7 @@ class InstrInstance:
       for i in range(0, nLaminatedDomainUops - 1):
          fusedUop = fusedDomainUops.popleft()
          if ((len(fusedUop.getUnfusedUops()) == 1) and fusedUop.getUnfusedUops()[0].prop.possiblePorts
-               and any(p in ['2', '3', '7'] for p in fusedUop.getUnfusedUops()[0].prop.possiblePorts)
+               and any(p in self.uArchConfig.fusiblePorts for p in fusedUop.getUnfusedUops()[0].prop.possiblePorts)
                and len(fusedDomainUops) >= nLaminatedDomainUops - i):
             laminatedDomainUops.append(LaminatedUop([fusedUop, fusedDomainUops.popleft()]))
          else:
@@ -1443,9 +1472,12 @@ def canBeInDSB(block, DSBBlockSize):
 
 TableLineData = NamedTuple('TableLineData', [('string', str), ('instr', Optional[Instr]), ('url', Optional[str]), ('uopsForRnd', List[List[LaminatedUop]])])
 
+def getPortColumnName(port, uArchConfig: MicroArchConfig):
+   return uArchConfig.portNames.get(port, 'Port ' + port)
+
 def getUopsTableColumns(tableLineData: List[TableLineData], uArchConfig: MicroArchConfig):
    columnKeys = ['MITE', 'MS', 'DSB', 'LSD', 'Issued', 'Exec.']
-   columnKeys.extend(('Port ' + p) for p in allPorts[uArchConfig.name])
+   columnKeys.extend(getPortColumnName(p, uArchConfig) for p in allPorts[uArchConfig.name])
    if any(uop.prop.divCycles for tld in tableLineData for lamUop in tld.uopsForRnd[0] for uop in lamUop.getUnfusedUops()):
       columnKeys.append('Div')
    columnKeys.append('Notes')
@@ -1470,7 +1502,7 @@ def getUopsTableColumns(tableLineData: List[TableLineData], uArchConfig: MicroAr
                for uop in fusedUop.getUnfusedUops():
                   if uop.actualPort is not None:
                      columns['Exec.'][-1] += 1
-                     columns['Port ' + uop.actualPort][-1] += 1
+                     columns[getPortColumnName(uop.actualPort, uArchConfig)][-1] += 1
                   if uop.prop.divCycles:
                      columns['Div'][-1] += uop.prop.divCycles
 
@@ -1495,6 +1527,7 @@ def getTerminalHyperlink(url, text):
 
 def printUopsTable(tableLineData, uArchConfig: MicroArchConfig, addHyperlink=True):
    columns = getUopsTableColumns(tableLineData, uArchConfig)
+   firstPortColumn = getPortColumnName(allPorts[uArchConfig.name][0], uArchConfig)
 
    if 'Notes' in columns:
       if 'J' in columns['Notes']:
@@ -1511,7 +1544,7 @@ def printUopsTable(tableLineData, uArchConfig: MicroArchConfig, addHyperlink=Tru
       for h, w in zip(columns.keys(), columnWidthList):
          if h == 'MITE':
             line += firstC
-         elif h in ['Issued', 'Exec.', 'Port 0', 'Notes']:
+         elif h in ['Issued', 'Exec.', firstPortColumn, 'Notes']:
             line += middleC
          else:
             line += u'\u2500'
@@ -1522,7 +1555,7 @@ def printUopsTable(tableLineData, uArchConfig: MicroArchConfig, addHyperlink=Tru
    def getTableLine(columnValues):
       line = ''
       for h, w, val in zip(columns.keys(), columnWidthList, columnValues):
-         if h in ['MITE', 'Issued', 'Exec.', 'Port 0', 'Notes']:
+         if h in ['MITE', 'Issued', 'Exec.', firstPortColumn, 'Notes']:
             line += u'\u2502'
          else:
             line += ' '
@@ -1909,8 +1942,15 @@ def runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPoli
       print('no instructions found')
       exit(1)
 
+   if uArchConfig.isAMD:
+      simpleFrontEnd = True # there is no front-end model for AMD CPUs
+      unknownInstrs = [instr.asm for instr in instructions if isinstance(instr, UnknownInstr)]
+      if unknownInstrs:
+         print('Warning: no data for: ' + '; '.join(unknownInstrs) + ' (treated as free; the prediction will be too low)', file=sys.stderr)
+
+   InstrInstance.uArchConfig = uArchConfig
    adjustLatenciesAndAddMergeUops(instructions, uArchConfig)
-   computeUopProperties(instructions)
+   computeUopProperties(instructions, uArchConfig)
 
    retireQueue = deque()
    rb = ReorderBuffer(retireQueue, uArchConfig)
@@ -2011,7 +2051,7 @@ def runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPoli
 # Disassembles a binary and finds for each instruction the corresponding entry in the XML file.
 # With the -iacaMarkers option, only the parts of the code that are between the IACA markers are considered.
 def main():
-   allMicroArchs = sorted(m for m in MicroArchConfigs if not '_' in m)
+   allMicroArchs = sorted(m for m in MicroArchConfigs if (not '_' in m) and (not MicroArchConfigs[m].isAMD)) # '-arch all' covers the Intel CPUs
 
    parser = argparse.ArgumentParser(description='Disassembler')
    parser.add_argument('filename', help='File to be disassembled')
