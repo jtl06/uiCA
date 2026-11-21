@@ -1,0 +1,82 @@
+{
+ "cmov_chain": {
+  "cycles": 4.00099502,
+  "instr": 7.00000166,
+  "expectedInstr": 7
+ },
+ "setcc_mix": {
+  "cycles": 1.25029558,
+  "instr": 6.00000074,
+  "expectedInstr": 6
+ },
+ "popcnt_indep4": {
+  "cycles": 1.25029046,
+  "instr": 6.00000074,
+  "expectedInstr": 6
+ },
+ "load_add_store": {
+  "cycles": 2.60050474,
+  "instr": 7.00000104,
+  "expectedInstr": 7
+ },
+ "zero_idiom": {
+  "cycles": 2.00035998,
+  "instr": 6.00000086,
+  "expectedInstr": 6
+ },
+ "movzx_shift": {
+  "cycles": 4.00072284,
+  "instr": 6.00000122,
+  "expectedInstr": 6
+ },
+ "vec_fp_mix": {
+  "cycles": 3.1331709,
+  "instr": 5.00000106,
+  "expectedInstr": 5
+ },
+ "vec_store_load": {
+  "cycles": 3.002881,
+  "instr": 5.00000108,
+  "expectedInstr": 5
+ },
+ "push_pop": {
+  "cycles": 1.00019558,
+  "instr": 5.0000006,
+  "expectedInstr": 5
+ },
+ "bitops": {
+  "cycles": 1.25020482,
+  "instr": 6.00000062,
+  "expectedInstr": 6
+ },
+ "poly_hash": {
+  "cycles": 4.00072198,
+  "instr": 5.00000132,
+  "expectedInstr": 5
+ },
+ "cvt_add": {
+  "cycles": 3.00259284,
+  "instr": 5.00000098,
+  "expectedInstr": 5
+ },
+ "vec_int_mul": {
+  "cycles": 1.33448906,
+  "instr": 4.00000064,
+  "expectedInstr": 4
+ },
+ "store_indexed": {
+  "cycles": 2.00036184,
+  "instr": 5.00000086,
+  "expectedInstr": 5
+ },
+ "div32": {
+  "cycles": 6.00120254,
+  "instr": 5.00000172,
+  "expectedInstr": 5
+ },
+ "memcpy_like": {
+  "cycles": 2.00040168,
+  "instr": 8.00000082,
+  "expectedInstr": 8
+ }
+}

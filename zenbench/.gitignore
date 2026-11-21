@@ -1,5 +1,2 @@
-out/
-out_heldout/
-out_sf/
-out_timing/
+out*/
 __pycache__/

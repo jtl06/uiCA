@@ -45,6 +45,7 @@ class Instr:
       self.macroFusedWithPrevInstr = macroFusedWithPrevInstr
       self.macroFusedWithNextInstr = macroFusedWithNextInstr
       self.cannotBeInDSBDueToJCCErratum = False
+      self.foldedInputReg = None # canonical register; see MicroArchConfig.renameImmediateFolding
       self.UopPropertiesList = [] # list with UopProperties for each (unfused domain) uop
       self.regMergeUopPropertiesList = []
       self.isNextToLastInstr = False
@@ -285,6 +286,14 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                                 memAddrOperands, agenOperands, latencies, TP, immediate, lcpStall, implicitRSPChange, mayBeEliminated, complexDecoder,
                                 nAvailableSimpleDecoders, hasLockPrefix, isBranchInstr, isSerializingInstr, isLoadSerializing, isStoreSerializing,
                                 macroFusibleWith)
+            if uArchConfig.renameImmediateFolding and (not uops) and (not mayBeEliminated) and (not sameReg) and instrOutputRegOperands:
+               iclass = instrD['iform'].split('_')[0]
+               if iclass in ['ADD', 'SUB', 'INC', 'DEC']:
+                  instruction.foldedInputReg = getCanonicalReg(instrOutputRegOperands[0][1])
+               elif iclass == 'LEA':
+                  baseRegs = [m.get('base') for m in instrD['memOperands'].values() if m.get('base')]
+                  if baseRegs:
+                     instruction.foldedInputReg = getCanonicalReg(baseRegs[0])
             break
 
       if instruction is None:

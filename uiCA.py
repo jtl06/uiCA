@@ -306,6 +306,12 @@ class Renamer:
                else:
                   # e.g., xor rax, rax
                   for op in uop.prop.instr.outputRegOperands:
+                     foldedInputReg = uop.prop.instr.foldedInputReg
+                     if foldedInputReg is not None:
+                        # e.g., add rax, 1 on Golden Cove: the result is available as soon as the input is
+                        entry = self.renameDict.setdefault(foldedInputReg, RenameDictEntry(RenamedOperand(ready=-1), False))
+                        self.curInstrRndRenameDict[getCanonicalReg(op.reg)] = RenameDictEntry(entry.renamedOp, False)
+                        continue
                      self.curInstrRndRenameDict[getCanonicalReg(op.reg)] = RenameDictEntry(RenamedOperand(uop=uop, ready=-1), False)
 
             if uop.prop.isLastUopOfInstr or uop.prop.isRegMergeUop or isinstance(uop, StackSyncUop):
@@ -1025,7 +1031,7 @@ class Scheduler:
                port = min(uop.prop.possiblePorts, key=lambda p: (self.portUsage[p], self.portLastAssigned[p]))
                self.nPortsAssigned += 1
                self.portLastAssigned[port] = self.nPortsAssigned
-            elif len(allPorts[self.uArchConfig.name]) == 10:
+            elif (self.uArchConfig.portAssignment == 'ICL') or ((self.uArchConfig.portAssignment is None) and len(allPorts[self.uArchConfig.name]) == 10):
                applicablePortUsages = [(p,u) for p, u in self.portUsageAtStartOfCycle.get(clock-1, self.portUsageAtStartOfCycle[clock]).items()
                                        if p in uop.prop.possiblePorts]
                sortedPortUsages = sorted(applicablePortUsages, key=lambda x: (x[1], -int(x[0], 16)))
@@ -2051,7 +2057,7 @@ def runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPoli
 # Disassembles a binary and finds for each instruction the corresponding entry in the XML file.
 # With the -iacaMarkers option, only the parts of the code that are between the IACA markers are considered.
 def main():
-   allMicroArchs = sorted(m for m in MicroArchConfigs if (not '_' in m) and (not MicroArchConfigs[m].isAMD)) # '-arch all' covers the Intel CPUs
+   allMicroArchs = sorted(m for m in MicroArchConfigs if (not '_' in m) and (not MicroArchConfigs[m].experimental))
 
    parser = argparse.ArgumentParser(description='Disassembler')
    parser.add_argument('filename', help='File to be disassembled')

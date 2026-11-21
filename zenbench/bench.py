@@ -11,9 +11,9 @@ Usage: bench.py gen | measure | mca | uica <ARCH> | table <ARCH>
 import json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, 'out')
+OUT = os.path.join(HERE, os.environ.get('ZENBENCH_OUT', 'out'))
 UICA = os.path.join(HERE, '..', 'uiCA.py')
-N = 50_000_000
+N = int(os.environ.get('ZENBENCH_N', 50_000_000))
 CPU = '2'
 LLVM_MCA = os.environ.get('LLVM_MCA', 'llvm-mca-22')
 
@@ -62,6 +62,27 @@ HELDOUT = {
    'div32':        ('mov r8, 1000000007\nmov r9, 12345', 'xor edx, edx\nmov eax, r8d\ndiv r9d'),
    'memcpy_like':  ('', 'mov rax, [rsi+rcx*8]\nmov rdx, [rsi+rcx*8+8]\nmov [rsi+rcx*8+4096], rax\nmov [rsi+rcx*8+4104], rdx\nadd rcx, 2\nand rcx, 62'),
 }
+# Golden Cove: uops.info reports zero uops for the 64-bit forms of add/sub with an 8-bit immediate, inc, dec and lea with base (+ displacement)
+# on Alder Lake-P. These loops test how that behaves (select with SET=fold).
+FOLD = {
+   'addimm_chain1': ('', 'add rax, 1'),
+   'addimm_chain2': ('', 'add rax, 1\n' * 2),
+   'addimm_chain4': ('', 'add rax, 1\n' * 4),
+   'addimm_chain8': ('', 'add rax, 1\n' * 8),
+   'inc_chain4':    ('', 'inc rax\n' * 4),
+   'inc_chain8':    ('', 'inc rax\n' * 8),
+   'sub_chain4':    ('', 'sub rax, 1\n' * 4),
+   'lea_bd_chain4': ('', 'lea rax, [rax+1]\n' * 4),
+   'add32_chain4':  ('', 'add eax, 1\n' * 4),
+   'addimm32_chain4':('', 'add rax, 1000\n' * 4),
+   'addimm_indep8': ('', 'add rax, 1\nadd rbx, 1\nadd rcx, 1\nadd rdx, 1\nadd rdi, 1\nadd r8, 1\nadd r9, 1\nadd r10, 1'),
+   'fold_then_alu': ('', 'add rax, 1\nadd rax, 1\nxor rbx, rax\nadd rax, 1\nadd rax, 1\nxor rbx, rax'),
+   'fold_then_load':('', 'add rcx, 8\nand rcx, 255\nmov rax, [rsi+rcx]\nadd rdx, rax'),
+   'addreg_chain8': ('', 'add rax, rbx\n' * 8),
+}
+if os.environ.get('SET') == 'fold':
+   TESTS = FOLD
+   OUT = OUT + '_fold'
 if os.environ.get('SET') == 'heldout':
    TESTS = HELDOUT
    OUT = OUT + '_heldout'

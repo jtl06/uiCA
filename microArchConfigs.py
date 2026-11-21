@@ -8,7 +8,8 @@ class MicroArchConfig:
                 high8RenamedSeparately=True, movzxHigh8AliasCanBeEliminated=True, moveEliminationPipelineLength=2, moveEliminationGPRSlots=4,
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
-                storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None):
+                storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
+                renameImmediateFolding=False):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -51,6 +52,9 @@ class MicroArchConfig:
       self.dividerPort = dividerPort # port that is connected to the divider
       self.loadLatency = loadLatency # latency of a load uop
       self.portNames = portNames or {} # display names for ports, e.g., {'a': 'ALU0'}
+      self.experimental = experimental # not included in '-arch all'
+      self.portAssignment = portAssignment # None: select the port assignment algorithm based on the number of ports; 'ICL': use the algorithm for ICL
+      self.renameImmediateFolding = renameImmediateFolding # add/sub with an 8-bit immediate, inc, dec, and lea with base (+disp.) are handled by the renamer
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
 
@@ -226,6 +230,7 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    LSDEnabled = False,
    fastPointerChasing = False,
    isAMD = True,
+   experimental = True,
    loadPorts = 'ghi',
    storeAddrPorts = '',
    storeDataPorts = 'stx',
@@ -235,3 +240,27 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    portNames = {'a': 'ALU0', 'b': 'ALU1', 'c': 'ALU2', 'd': 'ALU3', 'g': 'AGU0', 'h': 'AGU1', 'i': 'AGU2', 's': 'SD0', 't': 'SD1',
                 'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt'},
 )
+
+# Experimental: Alder Lake P-cores (Golden Cove). Based on the ICL configuration; the front-end parameters and the port assignment were not
+# reverse-engineered for this microarchitecture (use -simpleFrontEnd to ignore the front end).
+# Widths and buffer sizes are the commonly cited figures for Golden Cove; they were NOT checked against Intel's optimization manual. The
+# reservation station is modeled as one pool. Ports as named by uops.info: 0, 1, 5, 6, B (ALUs), 2, 3, A (loads), 4, 9 (store data), 7, 8 (store address).
+# Measured on a Core i7-12650H: register moves are eliminated, and the instructions that uops.info reports with zero uops (64-bit add/sub with an
+# 8-bit immediate, inc, dec, lea with base and displacement) have zero latency but occupy an issue slot.
+MicroArchConfigs['ADL-P'] = copy.deepcopy(MicroArchConfigs['ICL'])
+MicroArchConfigs['ADL-P'].name = 'ADL-P'
+MicroArchConfigs['ADL-P'].XEDName = 'ALDER_LAKE'
+MicroArchConfigs['ADL-P'].nDecoders = 6
+MicroArchConfigs['ADL-P'].DSBWidth = 8
+MicroArchConfigs['ADL-P'].IDQWidth = 144
+MicroArchConfigs['ADL-P'].issueWidth = 6
+MicroArchConfigs['ADL-P'].RBWidth = 512
+MicroArchConfigs['ADL-P'].RSWidth = 205 # unverified
+MicroArchConfigs['ADL-P'].retireWidth = 8
+MicroArchConfigs['ADL-P'].moveEliminationGPRSlots = 'unlimited'
+MicroArchConfigs['ADL-P'].LSDEnabled = False # the behavior of the LSD is not known for this microarchitecture; fitted on the zenbench development loops
+MicroArchConfigs['ADL-P'].loadPorts = '23A'
+MicroArchConfigs['ADL-P'].fusiblePorts = '237A'
+MicroArchConfigs['ADL-P'].portAssignment = 'ICL'
+MicroArchConfigs['ADL-P'].renameImmediateFolding = True
+MicroArchConfigs['ADL-P'].experimental = True

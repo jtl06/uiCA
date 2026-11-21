@@ -1,0 +1,102 @@
+{
+ "add_indep6": {
+  "cycles": 2.00047162,
+  "instr": 8.00000102,
+  "expectedInstr": 8
+ },
+ "add_chain4": {
+  "cycles": 4.00076914,
+  "instr": 6.0000012,
+  "expectedInstr": 6
+ },
+ "imul_chain2": {
+  "cycles": 6.00117134,
+  "instr": 4.00000178,
+  "expectedInstr": 4
+ },
+ "imul_indep3": {
+  "cycles": 3.00054888,
+  "instr": 5.00000106,
+  "expectedInstr": 5
+ },
+ "shl_indep4": {
+  "cycles": 2.00035882,
+  "instr": 6.00000082,
+  "expectedInstr": 6
+ },
+ "lea_chain2": {
+  "cycles": 4.00072728,
+  "instr": 4.00000122,
+  "expectedInstr": 4
+ },
+ "mov_chain": {
+  "cycles": 1.0001725,
+  "instr": 6.00000056,
+  "expectedInstr": 6
+ },
+ "test_jcc3": {
+  "cycles": 2.00036164,
+  "instr": 8.00000084,
+  "expectedInstr": 8
+ },
+ "ptr_chase": {
+  "cycles": 4.00078112,
+  "instr": 3.00000132,
+  "expectedInstr": 3
+ },
+ "loadop_chain2": {
+  "cycles": 2.00037292,
+  "instr": 4.00000084,
+  "expectedInstr": 4
+ },
+ "load_indep6": {
+  "cycles": 2.00035546,
+  "instr": 8.00000078,
+  "expectedInstr": 8
+ },
+ "store_indep4": {
+  "cycles": 2.0003532,
+  "instr": 6.00000082,
+  "expectedInstr": 6
+ },
+ "store_fwd": {
+  "cycles": 1.00021398,
+  "instr": 5.00000058,
+  "expectedInstr": 5
+ },
+ "div64": {
+  "cycles": 7.00145006,
+  "instr": 5.0000019,
+  "expectedInstr": 5
+ },
+ "addsd_chain2": {
+  "cycles": 6.0032804,
+  "instr": 4.00000166,
+  "expectedInstr": 4
+ },
+ "vmulpd_indep6": {
+  "cycles": 3.0036952,
+  "instr": 8.00000104,
+  "expectedInstr": 8
+ },
+ "vpaddd_indep6": {
+  "cycles": 1.50192724,
+  "instr": 8.00000068,
+  "expectedInstr": 8
+ },
+ "fma_mem_chain": {
+  "cycles": 4.00235432,
+  "instr": 3.00000138,
+  "expectedInstr": 3
+ },
+ "mixed_hash": {
+  "cycles": 2.66999686,
+  "instr": 8.000001,
+  "expectedInstr": 8
+ },
+ "mixed_fp": {
+  "cycles": 3.002818,
+  "instr": 7.00000108,
+  "expectedInstr": 7
+ }
+}

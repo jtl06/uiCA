@@ -6,6 +6,9 @@ iterations, and divide the wall-clock times. Process start-up time is removed by
 iteration. Runs are interleaved and the minimum over several repetitions is used, so that both loops are timed at the same clock frequency.
 
 This script compares the result with the cycle counts that bench.py obtained with perf.
+
+Note: this only works if the clock frequency is the same for all runs. On a laptop whose frequency ramps up at the start of each process
+(Core i7-12650H), the results were off by up to 30%. Use selftimed.py instead, which times the loops inside one warmed-up process.
 Usage: timing_experiment.py [repetitions]   (run 'bench.py gen' and 'bench.py measure' for both sets first)
 """
 import json, os, subprocess, sys, time
