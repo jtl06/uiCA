@@ -266,6 +266,11 @@ def main():
                   latData[(startOp, targetOp, 'addrI')] = int(latNode.attrib['cycles_addr_index'])
                if 'cycles_mem' in latNode.attrib:
                   latData[(startOp, targetOp, 'mem')] = int(latNode.attrib['cycles_mem'])
+               # instructions with a value-dependent latency (e.g., division, square root) only have min_ and max_ variants; without these, the
+               # latency of the memory operands would be 1 (e.g., 'divpd xmm5, [rax]' would not be limited by the latency of xmm5 -> xmm5)
+               for suffix, key in [('addr', 'addr'), ('addr_index', 'addrI'), ('mem', 'mem')]:
+                  if ('min_cycles_' + suffix in latNode.attrib) and ('cycles_' + suffix not in latNode.attrib):
+                     latData[(startOp, targetOp, key)] = int(latNode.attrib['min_cycles_' + suffix])
 
             if latData:
                perfData['lat'] = latData
