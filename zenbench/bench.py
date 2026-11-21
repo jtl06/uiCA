@@ -83,6 +83,27 @@ FOLD = {
 if os.environ.get('SET') == 'fold':
    TESTS = FOLD
    OUT = OUT + '_fold'
+# Loops for the model changes that were derived from the per-instruction throughputs of uops.info (see instr_check.py): vector loads,
+# read-modify-write instructions, lock prefix, FP divider, microcoded instructions (select with SET=fixes).
+FP_INIT = 'mov rax, 0x4000000000000000\nmovq xmm8, rax\nmov rax, 0x4008000000000000\nmovq xmm9, rax\nmov r8, 3'
+FIXES = {
+   'vec_load4':     ('', 'movaps xmm0, [rsi]\nmovaps xmm1, [rsi+16]\nmovaps xmm2, [rsi+32]\nmovaps xmm3, [rsi+48]'),
+   'vec_load4_add2':('', 'movaps xmm0, [rsi]\nmovaps xmm1, [rsi+16]\nmovaps xmm2, [rsi+32]\nmovaps xmm3, [rsi+48]\nadd rax, 1\nadd rbx, 1'),
+   'rmw_inc4':      ('', 'inc qword ptr [rsi]\ninc qword ptr [rsi+8]\ninc qword ptr [rsi+16]\ninc qword ptr [rsi+24]'),
+   'rmw_inc2_load2':('', 'inc qword ptr [rsi]\ninc qword ptr [rsi+8]\nmov rax, [rsi+64]\nmov rbx, [rsi+72]'),
+   'lock_add':      ('', 'lock add [rsi], rax\nadd rbx, 1\nadd rcx, 1'),
+   'sqrt2':         (FP_INIT, 'vsqrtsd xmm0, xmm8, xmm8\nvsqrtsd xmm1, xmm9, xmm9'),
+   'sqrt_div':      (FP_INIT, 'vsqrtsd xmm0, xmm8, xmm8\nvdivsd xmm1, xmm8, xmm9'),
+   'div_add4':      (FP_INIT, 'vdivsd xmm1, xmm8, xmm9\nadd rax, 1\nadd rbx, 1\nadd rcx, 1\nadd rdx, 1'),
+   'shld_indep2':   (FP_INIT, 'shld rax, r8, 3\nshld rbx, r8, 5'),
+   'bsf_indep2':    (FP_INIT, 'bsf rax, r8\nbsf rbx, r8'),
+   'rcl2':          ('', 'rcl rax, 1\nrcl rbx, 1'),
+   'cvt_indep2':    (FP_INIT, 'vcvtsi2sd xmm0, xmm8, r8\nvcvtsi2sd xmm1, xmm8, r8'),
+   'xadd':          ('', 'xadd rax, rbx\nadd rcx, 1'),
+}
+if os.environ.get('SET') == 'fixes':
+   TESTS = FIXES
+   OUT = OUT + '_fixes'
 if os.environ.get('SET') == 'heldout':
    TESTS = HELDOUT
    OUT = OUT + '_heldout'

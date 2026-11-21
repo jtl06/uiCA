@@ -1,0 +1,67 @@
+{
+ "vec_load4": {
+  "cycles": 2.00047824,
+  "instr": 6.00000102,
+  "expectedInstr": 6
+ },
+ "vec_load4_add2": {
+  "cycles": 2.00046452,
+  "instr": 8.00000102,
+  "expectedInstr": 8
+ },
+ "rmw_inc4": {
+  "cycles": 2.85664542,
+  "instr": 6.000001,
+  "expectedInstr": 6
+ },
+ "rmw_inc2_load2": {
+  "cycles": 2.1805357,
+  "instr": 6.00000086,
+  "expectedInstr": 6
+ },
+ "lock_add": {
+  "cycles": 7.3961491,
+  "instr": 5.00000202,
+  "expectedInstr": 5
+ },
+ "sqrt2": {
+  "cycles": 17.01670506,
+  "instr": 4.00000412,
+  "expectedInstr": 4
+ },
+ "sqrt_div": {
+  "cycles": 13.44491916,
+  "instr": 4.0000034,
+  "expectedInstr": 4
+ },
+ "div_add4": {
+  "cycles": 4.99057226,
+  "instr": 7.0000017,
+  "expectedInstr": 7
+ },
+ "shld_indep2": {
+  "cycles": 4.00069856,
+  "instr": 4.00000134,
+  "expectedInstr": 4
+ },
+ "bsf_indep2": {
+  "cycles": 6.00118362,
+  "instr": 4.00000178,
+  "expectedInstr": 4
+ },
+ "rcl2": {
+  "cycles": 2.0003319,
+  "instr": 4.0000008,
+  "expectedInstr": 4
+ },
+ "cvt_indep2": {
+  "cycles": 2.00248702,
+  "instr": 4.00000102,
+  "expectedInstr": 4
+ },
+ "xadd": {
+  "cycles": 1.00017672,
+  "instr": 4.00000058,
+  "expectedInstr": 4
+ }
+}

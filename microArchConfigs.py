@@ -232,13 +232,13 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    isAMD = True,
    experimental = True,
    loadPorts = 'ghi',
-   storeAddrPorts = '',
+   storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
    storeDataPorts = 'stx',
    fusiblePorts = 'ghi',
    dividerPort = 'a',
    loadLatency = 4, # SOG 19h, 2.12 (integer loads)
    portNames = {'a': 'ALU0', 'b': 'ALU1', 'c': 'ALU2', 'd': 'ALU3', 'g': 'AGU0', 'h': 'AGU1', 'i': 'AGU2', 's': 'SD0', 't': 'SD1',
-                'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt'},
+                'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt', 'y': '(SA0)', 'z': '(SA1)'},
 )
 
 # Experimental: Alder Lake P-cores (Golden Cove). Based on the ICL configuration; the front-end parameters and the port assignment were not

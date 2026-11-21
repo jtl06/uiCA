@@ -16,6 +16,10 @@ allXmlAttributes = ['agen', 'bcast', 'eosz', 'high8', 'immzero', 'mask', 'rep', 
 # AMD's Software Optimization Guide for Family 19h (section 2.10.2).
 AMD_ALU = 'abcd'       # ALU0-3
 AMD_AGU = 'ghi'        # AGU0-2
+AMD_VEC_LOAD_AGU = 'gh' # only two vector loads can be executed per cycle (e.g., uops.info: MOVAPD (XMM, M128) has a throughput of 0.5)
+# A read-modify-write instruction computes its address only once (e.g., uops.info: INC (M64) has a throughput of 0.5, which is the limit for
+# stores). Its store-address uop is therefore assigned to virtual ports that do not correspond to execution units.
+AMD_RMW_STORE_ADDR = 'yz'
 AMD_STORE_DATA = 'st'  # integer store data; two stores per cycle
 AMD_FP_STORE_DATA = 'x'
 AMD_FP_PORTS = {'0': 'k', '1': 'l', '2': 'm', '3': 'n', '4': 'o', '5': 'p'}
@@ -42,6 +46,7 @@ def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
    memOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('type') == 'mem']
    memR = any('r' in o.attrib.get('r', '') + o.attrib.get('rw', '') or o.attrib.get('r') == '1' for o in memOps)
    memW = any('w' in o.attrib.get('w', '') + o.attrib.get('rw', '') or o.attrib.get('w') == '1' for o in memOps)
+   isRMW = any((o.attrib.get('r') == '1' and o.attrib.get('w') == '1') or ('r' in o.attrib.get('rw', '') and 'w' in o.attrib.get('rw', '')) for o in memOps)
    regOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('type') == 'reg']
    usesVecRegs = any(('MM' in (o.text or '')) for o in regOps)
    nonSuppressedOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('suppressed', '0') != '1' and o.attrib.get('type') != 'flags']
@@ -86,7 +91,9 @@ def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
       aluPcs = [aluPorts] * nALU
 
    portData = {}
-   for pc in [AMD_AGU] * (nLoad + nStore) + ([AMD_FP_STORE_DATA if (fpStore or usesVecRegs) else AMD_STORE_DATA] * nStore) + aluPcs + fpPcs:
+   loadPcs = [AMD_VEC_LOAD_AGU if usesVecRegs else AMD_AGU] * nLoad
+   storeAddrPcs = [AMD_RMW_STORE_ADDR if isRMW else AMD_AGU] * nStore
+   for pc in loadPcs + storeAddrPcs + ([AMD_FP_STORE_DATA if (fpStore or usesVecRegs) else AMD_STORE_DATA] * nStore) + aluPcs + fpPcs:
       portData[pc] = portData.get(pc, 0) + 1
 
    perfData = {'uops': sum(portData.values()), 'retSlots': macroOps, 'uopsMITE': macroOps, 'uopsMS': 0, 'ports': portData}
@@ -97,15 +104,35 @@ def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
       # eliminated at rename; the '_SR' variants are used if the move cannot be eliminated (see instructions.py)
       perfData.update({'uops': 0, 'ports': {}, 'uops_SR': 1, 'ports_SR': portData})
 
+   TPs = [float(measurementNode.attrib[a]) for a in ['TP_unrolled', 'TP_loop'] if a in measurementNode.attrib]
    if 'div_cycles' in measurementNode.attrib:
-      perfData['divC'] = int(measurementNode.attrib['div_cycles'])
+      # as for the Intel CPUs (see main())
+      divCycles = int(measurementNode.attrib['div_cycles'])
+      TP = int(float(measurementNode.attrib.get('TP_unrolled', divCycles)))
+      if TP <= divCycles:
+         perfData['divC'] = TP
+      else:
+         perfData['divC'] = divCycles
+         perfData['TP'] = TP
+   elif TPs and (category not in ['COND_BR', 'UNCOND_BR', 'CALL', 'RET']):
+      # Instructions whose measured throughput is much lower than what the ports and the dispatch width allow: microcoded instructions,
+      # instructions with a lock prefix, FP division and square root (there is no model of the microcode sequencer or the FP divider).
+      # As for some instructions on Intel CPUs, the measured throughput is then used as a limit for this instruction.
+      pcs = list(portData.items())
+      bound = macroOps / 6.0
+      for mask in range(1, 1 << len(pcs)):
+         union = set(p for i, (pc, _) in enumerate(pcs) if mask & (1 << i) for p in pc)
+         bound = max(bound, sum(n for pc, n in pcs if set(pc) <= union) / float(len(union)))
+      locked = (XMLInstr.attrib.get('locked', '') == '1')
+      if (min(TPs) > 1.3 * bound) and ((min(TPs) >= 1.0) or locked or (macroOps >= 2)):
+         perfData['TP'] = round(min(TPs), 2)
+         amdStats[arch]['measured throughput used as a limit'] += 1
 
    # statistics, and comparison with the measured throughput for instructions with one uop
    s = amdStats[arch]
    s['instructions'] += 1
    s['FP ports from uops.info' if (fpPcs or fpStore) else ('synthesized (table)' if aluPorts != AMD_ALU else 'synthesized (default ALU)') if nALU
      else 'load/store/eliminated only'] += 1
-   TPs = [float(measurementNode.attrib[a]) for a in ['TP_unrolled', 'TP_loop'] if a in measurementNode.attrib]
    if TPs and (not memOps) and (len(aluPcs) == 1) and (not fpPcs) and (category not in ['COND_BR', 'UNCOND_BR', 'CALL', 'RET']):
       s['single-uop ALU instr. with measured TP'] += 1
       if abs(min(TPs) - 1.0/len(aluPorts)) > 0.13:
