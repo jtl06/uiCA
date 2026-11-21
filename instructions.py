@@ -342,6 +342,17 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
 
    if len(instructions) > 0:
       instructions[-1].isLastInstr = True
+      if uArchConfig.takenBranchPort and instructions[-1].isBranchInstr:
+         # the uop of a macro-fused branch belongs to the previous instruction
+         branchUopInstr = instructions[-2] if (instructions[-1].macroFusedWithPrevInstr and len(instructions) > 1) else instructions[-1]
+         branchUopInstr.portData = dict(branchUopInstr.portData)
+         for p, u in list(branchUopInstr.portData.items()):
+            if (uArchConfig.takenBranchPort in p) and (p == ''.join(list(instructions[-1].portData.keys())[:1]) or branchUopInstr is instructions[-1]):
+               del branchUopInstr.portData[p]
+               if u > 1:
+                  branchUopInstr.portData[p] = u - 1
+               branchUopInstr.portData[uArchConfig.takenBranchPort] = branchUopInstr.portData.get(uArchConfig.takenBranchPort, 0) + 1
+               break
    if len(instructions) > 1:
       instructions[-2].isNextToLastInstr = True
 

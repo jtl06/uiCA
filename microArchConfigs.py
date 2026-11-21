@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False):
+                renameImmediateFolding=False, takenBranchPort=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -55,6 +55,7 @@ class MicroArchConfig:
       self.experimental = experimental # not included in '-arch all'
       self.portAssignment = portAssignment # None: select the port assignment algorithm based on the number of ports; 'ICL': use the algorithm for ICL
       self.renameImmediateFolding = renameImmediateFolding # add/sub with an 8-bit immediate, inc, dec, and lea with base (+disp.) are handled by the renamer
+      self.takenBranchPort = takenBranchPort # if set, the branch at the end of the loop can only use this port
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
 
@@ -241,8 +242,8 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
                 'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt', 'y': '(SA0)', 'z': '(SA1)'},
 )
 
-# Experimental: Alder Lake P-cores (Golden Cove). Based on the ICL configuration; the front-end parameters and the port assignment were not
-# reverse-engineered for this microarchitecture (use -simpleFrontEnd to ignore the front end).
+# Experimental: Alder Lake P-cores (Golden Cove). Based on the ICL configuration; apart from the LSD, the front-end parameters and the port
+# assignment were not reverse-engineered for this microarchitecture (use -simpleFrontEnd to ignore the front end).
 # Widths and buffer sizes are the commonly cited figures for Golden Cove; they were NOT checked against Intel's optimization manual. The
 # reservation station is modeled as one pool. Ports as named by uops.info: 0, 1, 5, 6, B (ALUs), 2, 3, A (loads), 4, 9 (store data), 7, 8 (store address).
 # Measured on a Core i7-12650H: register moves are eliminated, and the instructions that uops.info reports with zero uops (64-bit add/sub with an
@@ -258,9 +259,15 @@ MicroArchConfigs['ADL-P'].RBWidth = 512
 MicroArchConfigs['ADL-P'].RSWidth = 205 # unverified
 MicroArchConfigs['ADL-P'].retireWidth = 8
 MicroArchConfigs['ADL-P'].moveEliminationGPRSlots = 'unlimited'
-MicroArchConfigs['ADL-P'].LSDEnabled = False # the behavior of the LSD is not known for this microarchitecture; fitted on the zenbench development loops
+# LSD: measured on a Core i7-12650H with perf (zenbench/lsd_experiment.py): loops of nops with up to 35 uops are delivered by the LSD, and
+# their cycle counts are explained by these unroll counts (for loops with fewer than 7 uops, the count cannot be determined this way).
+MicroArchConfigs['ADL-P'].LSDEnabled = True
+MicroArchConfigs['ADL-P'].LSDUnrolling = dict([(7, 9), (8, 9)] + [(n, 5) for n in range(9, 19)] + [(n, 3) for n in range(19, 33)] + [(n, 2) for n in range(33, 36)])
 MicroArchConfigs['ADL-P'].loadPorts = '23A'
 MicroArchConfigs['ADL-P'].fusiblePorts = '237A'
 MicroArchConfigs['ADL-P'].portAssignment = 'ICL'
 MicroArchConfigs['ADL-P'].renameImmediateFolding = True
+# perf, Core i7-12650H: the (macro-fused) branch at the end of a loop is always executed on port 6, while branches that are not taken
+# also use port 0 (e.g., zenbench loops imul_indep3 and test_jcc3)
+MicroArchConfigs['ADL-P'].takenBranchPort = '6'
 MicroArchConfigs['ADL-P'].experimental = True
