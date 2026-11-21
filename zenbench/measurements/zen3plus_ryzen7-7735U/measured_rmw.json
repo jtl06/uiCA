@@ -1,0 +1,52 @@
+{
+ "rmw_neg32": {
+  "cycles": 1.00030506,
+  "instr": 3.0000007,
+  "expectedInstr": 3
+ },
+ "rmw_neg16": {
+  "cycles": 6.99992282,
+  "instr": 3.00000194,
+  "expectedInstr": 3
+ },
+ "rmw_add32_imm": {
+  "cycles": 1.00024168,
+  "instr": 3.00000058,
+  "expectedInstr": 3
+ },
+ "rmw_add32_reg": {
+  "cycles": 1.0002497,
+  "instr": 3.0000006,
+  "expectedInstr": 3
+ },
+ "rmw_add64_reg": {
+  "cycles": 1.00023206,
+  "instr": 3.0000006,
+  "expectedInstr": 3
+ },
+ "rmw_xor64_imm": {
+  "cycles": 1.00025372,
+  "instr": 3.00000062,
+  "expectedInstr": 3
+ },
+ "rmw_sar64_1": {
+  "cycles": 1.00025254,
+  "instr": 3.0000006,
+  "expectedInstr": 3
+ },
+ "rmw_add8_imm": {
+  "cycles": 6.98182136,
+  "instr": 3.00000192,
+  "expectedInstr": 3
+ },
+ "rmw_bts64_imm": {
+  "cycles": 8.17621554,
+  "instr": 3.00000226,
+  "expectedInstr": 3
+ },
+ "rmw_inc32_add2": {
+  "cycles": 1.03737836,
+  "instr": 5.00000064,
+  "expectedInstr": 5
+ }
+}

@@ -100,6 +100,12 @@ def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
 
    isRegMove = (('MOV' in instrString) and (not memOps) and (macroOps == 1) and (len(nonSuppressedOps) == 2) and latCycles and (max(latCycles) == 0)
                    and all(o.attrib.get('type') == 'reg' for o in nonSuppressedOps))
+   # Memory renaming, measured on a Ryzen 7 7735U (zenbench SET=rmw): read-modify-write instructions with a 32- or 64-bit memory operand that
+   # are not microcoded (e.g., 'add dword ptr [rsi+64], ecx': 1 cycle per iteration; 16- and 8-bit forms and bts: 7 or more cycles), and
+   # loads into general-purpose registers (e.g., 'mov [rsi], rax; mov rax, [rsi]; add rax, 1': 1 cycle; a vector store/load pair: 10 cycles).
+   memWidth = int(memOps[0].attrib.get('width', 0)) if memOps else 0
+   if (isRMW and memWidth in (32, 64) and macroOps <= 2 and XMLInstr.attrib.get('locked', '') != '1') or (memR and not memW and not usesVecRegs):
+      perfData['memRename'] = 1
    if isRegMove:
       # eliminated at rename; the '_SR' variants are used if the move cannot be eliminated (see instructions.py)
       perfData.update({'uops': 0, 'ports': {}, 'uops_SR': 1, 'ports_SR': portData})

@@ -122,9 +122,9 @@ class RenamedOperand:
       if self.__ready is not None:
          return self.__ready
 
-      if self.uop.instrI.uArchConfig.isAMD and self.uop.prop.isLoadUop and (self.uop.storeBufferEntry is not None):
-         # Memory renaming: a load from an address that was just written with the same addressing expression gets its value directly from the
-         # register that was stored (measured on Zen 3+: 'mov [rsi], rax; mov rax, [rsi]; add rax, 1' runs at 1 cycle per iteration).
+      if self.uop.prop.isLoadUop and (self.uop.storeBufferEntry is not None) and self.uop.prop.instr.memRenaming:
+         # Memory renaming (see MicroArchConfig.memoryRenaming): a load from an address that was just written with the same addressing
+         # expression gets its value directly from the register that was stored.
          readyCycles = [op.getReadyCycle() for u in self.uop.storeBufferEntry.uops if u.prop.isStoreDataUop for op in u.renamedInputOperands]
          if any((r is None) for r in readyCycles):
             return None
@@ -1271,6 +1271,9 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
                   for storePseudoOp in storePseudoOps:
                      adjustedLatencies[(loadPseudoOp, storePseudoOp)] = max([max(1, instr.latencies.get((inMemOp, outMemOp), 1) - uArchConfig.loadLatency)
                                                                               for outMemOp in instr.outputMemOperands] or [1]) # ToDo
+                     if instr.memRenaming:
+                        # with memory renaming, only the latency of the operation itself remains on the path through memory
+                        adjustedLatencies[(loadPseudoOp, storePseudoOp)] = 1
 
             latClasses = {} # maps latencies to inputs with these latencies
             for inOp in nonMemInputOperands:

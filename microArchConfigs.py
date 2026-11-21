@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -56,6 +56,10 @@ class MicroArchConfig:
       self.portAssignment = portAssignment # None: select the port assignment algorithm based on the number of ports; 'ICL': use the algorithm for ICL
       self.renameImmediateFolding = renameImmediateFolding # add/sub with an 8-bit immediate, inc, dec, and lea with base (+disp.) are handled by the renamer
       self.takenBranchPort = takenBranchPort # if set, the branch at the end of the loop can only use this port
+      # Memory renaming: a load that reads what an earlier store to the same address (with the same addressing expression) wrote gets the value
+      # directly from the register that the store read. None: not supported; 'data': the instructions are marked in the instruction data
+      # (convertXML.py); 'latency': read-modify-write instructions for which uops.info measured a memory-to-memory latency of at most 1 cycle
+      self.memoryRenaming = memoryRenaming
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
 
@@ -232,6 +236,7 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    fastPointerChasing = False,
    isAMD = True,
    experimental = True,
+   memoryRenaming = 'data',
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
    storeDataPorts = 'stx',
@@ -270,4 +275,8 @@ MicroArchConfigs['ADL-P'].renameImmediateFolding = True
 # perf, Core i7-12650H: the (macro-fused) branch at the end of a loop is always executed on port 6, while branches that are not taken
 # also use port 0 (e.g., zenbench loops imul_indep3 and test_jcc3)
 MicroArchConfigs['ADL-P'].takenBranchPort = '6'
+# perf, Core i7-12650H (zenbench SET=rmw): e.g., 'add dword ptr [rsi+64], 3' and 'add byte ptr [rsi+64], 3' run at 1 cycle per iteration, while the
+# forms with a register source and the 16-bit forms take more than 7 cycles. This agrees with the memory-to-memory latencies measured by
+# uops.info (1 vs. 6 or more cycles).
+MicroArchConfigs['ADL-P'].memoryRenaming = 'latency'
 MicroArchConfigs['ADL-P'].experimental = True

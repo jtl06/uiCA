@@ -46,6 +46,7 @@ class Instr:
       self.macroFusedWithNextInstr = macroFusedWithNextInstr
       self.cannotBeInDSBDueToJCCErratum = False
       self.foldedInputReg = None # canonical register; see MicroArchConfig.renameImmediateFolding
+      self.memRenaming = False # see MicroArchConfig.memoryRenaming
       self.UopPropertiesList = [] # list with UopProperties for each (unfused domain) uop
       self.regMergeUopPropertiesList = []
       self.isNextToLastInstr = False
@@ -294,6 +295,11 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                   baseRegs = [m.get('base') for m in instrD['memOperands'].values() if m.get('base')]
                   if baseRegs:
                      instruction.foldedInputReg = getCanonicalReg(baseRegs[0])
+            if uArchConfig.memoryRenaming == 'data':
+               instruction.memRenaming = bool(perfData.get('memRename'))
+            elif uArchConfig.memoryRenaming == 'latency':
+               memLat = [l for k, l in latData.items() if len(k) == 3 and k[2] == 'mem' and k[0] == k[1]]
+               instruction.memRenaming = bool(memLat) and (min(memLat) <= 1)
             break
 
       if instruction is None:

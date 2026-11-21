@@ -104,6 +104,22 @@ FIXES = {
 if os.environ.get('SET') == 'fixes':
    TESTS = FIXES
    OUT = OUT + '_fixes'
+# Read-modify-write instructions that update the same address in every iteration (memory renaming; select with SET=rmw)
+RMW = {
+   'rmw_neg32':      ('', 'neg dword ptr [rsi+64]'),
+   'rmw_neg16':      ('', 'neg word ptr [rsi+64]'),
+   'rmw_add32_imm':  ('', 'add dword ptr [rsi+64], 3'),
+   'rmw_add32_reg':  ('', 'add dword ptr [rsi+64], ecx'),
+   'rmw_add64_reg':  ('', 'add qword ptr [rsi+64], rcx'),
+   'rmw_xor64_imm':  ('', 'xor qword ptr [rsi+64], 0x12345'),
+   'rmw_sar64_1':    ('', 'sar qword ptr [rsi+64], 1'),
+   'rmw_add8_imm':   ('', 'add byte ptr [rsi+64], 3'),
+   'rmw_bts64_imm':  ('', 'bts qword ptr [rsi+64], 3'),
+   'rmw_inc32_add2': ('', 'inc dword ptr [rsi+64]\nadd rax, 1\nadd rbx, 1'),
+}
+if os.environ.get('SET') == 'rmw':
+   TESTS = RMW
+   OUT = OUT + '_rmw'
 if os.environ.get('SET') == 'heldout':
    TESTS = HELDOUT
    OUT = OUT + '_heldout'
