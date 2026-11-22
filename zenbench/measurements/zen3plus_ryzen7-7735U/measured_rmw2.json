@@ -1,0 +1,237 @@
+{
+ "rmw8_add_imm": {
+  "cycles": 6.9996055,
+  "instr": 3.00000325,
+  "expectedInstr": 3
+ },
+ "rmw8_add_reg": {
+  "cycles": 6.9507697,
+  "instr": 3.0000032,
+  "expectedInstr": 3
+ },
+ "rmw8_and_imm": {
+  "cycles": 6.9709044,
+  "instr": 3.0000032,
+  "expectedInstr": 3
+ },
+ "rmw8_neg": {
+  "cycles": 6.90196315,
+  "instr": 3.0000027,
+  "expectedInstr": 3
+ },
+ "rmw8_not": {
+  "cycles": 6.9226977,
+  "instr": 3.00000285,
+  "expectedInstr": 3
+ },
+ "rmw8_inc": {
+  "cycles": 6.90083235,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "rmw8_shl1": {
+  "cycles": 6.32583895,
+  "instr": 3.00000245,
+  "expectedInstr": 3
+ },
+ "rmw8_shl3": {
+  "cycles": 6.3262652,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "rmw8_shlcl": {
+  "cycles": 6.31746295,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "rmw8_rol3": {
+  "cycles": 6.3293662,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "rmw8_adc_imm": {
+  "cycles": 7.58295105,
+  "instr": 3.0000028,
+  "expectedInstr": 3
+ },
+ "rmw16_add_imm": {
+  "cycles": 6.89014745,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "rmw16_add_reg": {
+  "cycles": 6.91885185,
+  "instr": 3.0000025,
+  "expectedInstr": 3
+ },
+ "rmw16_and_imm": {
+  "cycles": 6.92362435,
+  "instr": 3.00000265,
+  "expectedInstr": 3
+ },
+ "rmw16_neg": {
+  "cycles": 6.93105045,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "rmw16_not": {
+  "cycles": 6.92195855,
+  "instr": 3.0000027,
+  "expectedInstr": 3
+ },
+ "rmw16_inc": {
+  "cycles": 6.94828425,
+  "instr": 3.0000026,
+  "expectedInstr": 3
+ },
+ "rmw16_shl1": {
+  "cycles": 6.32583805,
+  "instr": 3.00000235,
+  "expectedInstr": 3
+ },
+ "rmw16_shl3": {
+  "cycles": 6.3195022,
+  "instr": 3.00000225,
+  "expectedInstr": 3
+ },
+ "rmw16_shlcl": {
+  "cycles": 6.3215289,
+  "instr": 3.0000025,
+  "expectedInstr": 3
+ },
+ "rmw16_rol3": {
+  "cycles": 6.31215425,
+  "instr": 3.0000025,
+  "expectedInstr": 3
+ },
+ "rmw16_btc_imm": {
+  "cycles": 8.17694215,
+  "instr": 3.0000028,
+  "expectedInstr": 3
+ },
+ "rmw16_adc_imm": {
+  "cycles": 7.6072304,
+  "instr": 3.00000285,
+  "expectedInstr": 3
+ },
+ "rmw32_add_imm": {
+  "cycles": 1.00023055,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_add_reg": {
+  "cycles": 1.00023955,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_and_imm": {
+  "cycles": 1.0002237,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_neg": {
+  "cycles": 1.00023745,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_not": {
+  "cycles": 1.0002372,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_inc": {
+  "cycles": 1.0002444,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_shl1": {
+  "cycles": 1.00026855,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_shl3": {
+  "cycles": 1.0002655,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_shlcl": {
+  "cycles": 1.0002206,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_rol3": {
+  "cycles": 1.00025585,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw32_btc_imm": {
+  "cycles": 8.18628035,
+  "instr": 3.000003,
+  "expectedInstr": 3
+ },
+ "rmw32_adc_imm": {
+  "cycles": 1.0002583,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_add_imm": {
+  "cycles": 1.0002334,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_add_reg": {
+  "cycles": 1.0002507,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_and_imm": {
+  "cycles": 1.0002314,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_neg": {
+  "cycles": 1.0002323,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_not": {
+  "cycles": 1.00025805,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_inc": {
+  "cycles": 1.0002449,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_shl1": {
+  "cycles": 1.00026355,
+  "instr": 3.00000115,
+  "expectedInstr": 3
+ },
+ "rmw64_shl3": {
+  "cycles": 1.00024775,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_shlcl": {
+  "cycles": 1.00022415,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_rol3": {
+  "cycles": 1.00023235,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "rmw64_btc_imm": {
+  "cycles": 8.18928645,
+  "instr": 3.0000029,
+  "expectedInstr": 3
+ },
+ "rmw64_adc_imm": {
+  "cycles": 1.00025025,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ }
+}

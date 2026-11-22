@@ -1,0 +1,152 @@
+{
+ "pair_add32reg_none": {
+  "cycles": 1.0003042,
+  "instr": 3.0000012,
+  "expectedInstr": 3
+ },
+ "pair_add32reg_gpr": {
+  "cycles": 2.00055795,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "pair_add32reg_narrow": {
+  "cycles": 2.0005207,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "pair_add32reg_loadop": {
+  "cycles": 2.0005534,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "pair_add32reg_first": {
+  "cycles": 2.0005253,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "pair_add32reg_split": {
+  "cycles": 2.00050415,
+  "instr": 5.00000145,
+  "expectedInstr": 5
+ },
+ "pair_add16imm_none": {
+  "cycles": 6.81536425,
+  "instr": 3.0000028,
+  "expectedInstr": 3
+ },
+ "pair_add16imm_gpr": {
+  "cycles": 6.42525975,
+  "instr": 5.00000275,
+  "expectedInstr": 5
+ },
+ "pair_add16imm_narrow": {
+  "cycles": 6.3165285,
+  "instr": 5.0000023,
+  "expectedInstr": 5
+ },
+ "pair_add16imm_loadop": {
+  "cycles": 6.3783213,
+  "instr": 5.00000235,
+  "expectedInstr": 5
+ },
+ "pair_add16imm_first": {
+  "cycles": 6.41743665,
+  "instr": 5.00000255,
+  "expectedInstr": 5
+ },
+ "pair_add16imm_split": {
+  "cycles": 6.3370617,
+  "instr": 5.00000235,
+  "expectedInstr": 5
+ },
+ "pair_shl32_none": {
+  "cycles": 1.00236645,
+  "instr": 3.0000011,
+  "expectedInstr": 3
+ },
+ "pair_shl32_gpr": {
+  "cycles": 2.00093265,
+  "instr": 5.0000015,
+  "expectedInstr": 5
+ },
+ "pair_shl32_narrow": {
+  "cycles": 2.00139925,
+  "instr": 5.00000135,
+  "expectedInstr": 5
+ },
+ "pair_shl32_loadop": {
+  "cycles": 2.00213735,
+  "instr": 5.0000015,
+  "expectedInstr": 5
+ },
+ "pair_shl32_first": {
+  "cycles": 2.0014107,
+  "instr": 5.00000135,
+  "expectedInstr": 5
+ },
+ "pair_shl32_split": {
+  "cycles": 2.001419,
+  "instr": 5.00000135,
+  "expectedInstr": 5
+ },
+ "pair_shl16cl_none": {
+  "cycles": 6.23487945,
+  "instr": 3.0000023,
+  "expectedInstr": 3
+ },
+ "pair_shl16cl_gpr": {
+  "cycles": 6.26221595,
+  "instr": 5.00000235,
+  "expectedInstr": 5
+ },
+ "pair_shl16cl_narrow": {
+  "cycles": 6.25861275,
+  "instr": 5.00000255,
+  "expectedInstr": 5
+ },
+ "pair_shl16cl_loadop": {
+  "cycles": 6.2859405,
+  "instr": 5.0000025,
+  "expectedInstr": 5
+ },
+ "pair_shl16cl_first": {
+  "cycles": 6.4613977,
+  "instr": 5.0000024,
+  "expectedInstr": 5
+ },
+ "pair_shl16cl_split": {
+  "cycles": 6.2586808,
+  "instr": 5.00000245,
+  "expectedInstr": 5
+ },
+ "pair_rcl8_none": {
+  "cycles": 9.24352115,
+  "instr": 3.00000315,
+  "expectedInstr": 3
+ },
+ "pair_rcl8_gpr": {
+  "cycles": 9.24719395,
+  "instr": 5.0000031,
+  "expectedInstr": 5
+ },
+ "pair_rcl8_narrow": {
+  "cycles": 9.1613505,
+  "instr": 5.00000295,
+  "expectedInstr": 5
+ },
+ "pair_rcl8_loadop": {
+  "cycles": 8.27521345,
+  "instr": 5.00000285,
+  "expectedInstr": 5
+ },
+ "pair_rcl8_first": {
+  "cycles": 9.2166982,
+  "instr": 5.00000315,
+  "expectedInstr": 5
+ },
+ "pair_rcl8_split": {
+  "cycles": 9.17650905,
+  "instr": 5.00000315,
+  "expectedInstr": 5
+ }
+}

@@ -1,0 +1,82 @@
+{
+ "why_add32_64": {
+  "cycles": 1.0022714,
+  "instr": 3.00000125,
+  "expectedInstr": 3
+ },
+ "why_add32_6848": {
+  "cycles": 1.00226105,
+  "instr": 3.0000012,
+  "expectedInstr": 3
+ },
+ "why_shl8_3_6848": {
+  "cycles": 6.2762369,
+  "instr": 3.00000295,
+  "expectedInstr": 3
+ },
+ "why_shl8_0_6848": {
+  "cycles": 6.27708125,
+  "instr": 3.00000295,
+  "expectedInstr": 3
+ },
+ "why_shl8_0_64": {
+  "cycles": 6.25317175,
+  "instr": 3.0000026,
+  "expectedInstr": 3
+ },
+ "why_0895": {
+  "cycles": 6.2554393,
+  "instr": 9.00000245,
+  "expectedInstr": 9
+ },
+ "why_0895_no0": {
+  "cycles": 6.27601365,
+  "instr": 8.0000024,
+  "expectedInstr": 8
+ },
+ "why_0895_no1": {
+  "cycles": 6.33640785,
+  "instr": 8.0000025,
+  "expectedInstr": 8
+ },
+ "why_0895_no3": {
+  "cycles": 6.29253185,
+  "instr": 8.00000265,
+  "expectedInstr": 8
+ },
+ "why_0895_no4": {
+  "cycles": 6.2757472,
+  "instr": 8.00000235,
+  "expectedInstr": 8
+ },
+ "why_0895_no5": {
+  "cycles": 6.2408424,
+  "instr": 8.00000245,
+  "expectedInstr": 8
+ },
+ "why_0895_no6": {
+  "cycles": 6.25692955,
+  "instr": 8.00000245,
+  "expectedInstr": 8
+ },
+ "why_0895_shl3": {
+  "cycles": 6.1748477,
+  "instr": 9.00000225,
+  "expectedInstr": 9
+ },
+ "why_add32_st_next": {
+  "cycles": 2.00152455,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ },
+ "why_add32_st_far": {
+  "cycles": 2.00130165,
+  "instr": 4.00000135,
+  "expectedInstr": 4
+ },
+ "why_add32_st_before": {
+  "cycles": 2.00132035,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ }
+}

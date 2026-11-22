@@ -120,6 +120,65 @@ RMW = {
 if os.environ.get('SET') == 'rmw':
    TESTS = RMW
    OUT = OUT + '_rmw'
+# Read-modify-write chains through one address: operation x operand width (select with SET=rmw2)
+RMW2 = {}
+for _w, _p, _r in [(8, 'byte', 'cl'), (16, 'word', 'cx'), (32, 'dword', 'ecx'), (64, 'qword', 'rcx')]:
+   for _op, _body in [('add_imm', 'add {p} ptr [rsi+64], 3'), ('add_reg', 'add {p} ptr [rsi+64], {r}'), ('and_imm', 'and {p} ptr [rsi+64], 0x7f'),
+                      ('neg', 'neg {p} ptr [rsi+64]'), ('not', 'not {p} ptr [rsi+64]'), ('inc', 'inc {p} ptr [rsi+64]'),
+                      ('shl1', 'shl {p} ptr [rsi+64], 1'), ('shl3', 'shl {p} ptr [rsi+64], 3'), ('shlcl', 'shl {p} ptr [rsi+64], cl'),
+                      ('rol3', 'rol {p} ptr [rsi+64], 3'), ('btc_imm', 'btc {p} ptr [rsi+64], 3'), ('adc_imm', 'adc {p} ptr [rsi+64], 3')]:
+      if _w == 8 and _op == 'btc_imm': continue
+      RMW2['rmw%d_%s' % (_w, _op)] = ('mov ecx, 1', _body.format(p=_p, r=_r))
+if os.environ.get('SET') == 'rmw2':
+   TESTS = RMW2
+   OUT = OUT + '_rmw2'
+# Read-modify-write chains through memory in the presence of other instructions (select with SET=rmwctx)
+RMWCTX = {}
+_FILL = ['add rax, 1', 'add rbx, 1', 'add rdx, 1', 'add rdi, 1', 'add r8, 1', 'add r9, 1', 'add r10, 1', 'add r11, 1', 'add r12, 1', 'add r13, 1']
+for _name, _rmw in [('add32reg', 'add dword ptr [rsi+64], ecx'), ('add16imm', 'add word ptr [rsi+64], 3'), ('shl32', 'shl dword ptr [rsi+64], 3')]:
+   for _k in [0, 1, 2, 4, 8]:
+      RMWCTX['ctx_%s_f%d' % (_name, _k)] = ('mov ecx, 1', '\n'.join([_rmw] + _FILL[:_k]))
+   for _k in [1, 2, 4]:
+      RMWCTX['ctx_%s_ld%d' % (_name, _k)] = ('mov ecx, 1', '\n'.join([_rmw] + ['mov %s, qword ptr [rsi+%d]' % (r, 256 + 64 * j) for j, r in enumerate(['rax', 'rbx', 'rdx', 'rdi'][:_k])]))
+   for _k in [1, 2]:
+      RMWCTX['ctx_%s_st%d' % (_name, _k)] = ('mov ecx, 1', '\n'.join([_rmw] + ['mov qword ptr [rsi+%d], %s' % (1024 + 64 * j, r) for j, r in enumerate(['rax', 'rbx'][:_k])]))
+   RMWCTX['ctx_%s_imul' % _name] = ('mov ecx, 1', '\n'.join([_rmw, 'imul rax, rax', 'imul rax, rax']))
+   RMWCTX['ctx_%s_ld_before' % _name] = ('mov ecx, 1', '\n'.join(['mov rax, qword ptr [rsi+256]', 'mov rbx, qword ptr [rsi+320]', _rmw]))
+if os.environ.get('SET') == 'rmwctx':
+   TESTS = RMWCTX
+   OUT = OUT + '_rmwctx'
+# What makes read-modify-write chains in random loops faster on Ice Lake (select with SET=rmwwhy)
+_F0895 = ['mov rcx, qword ptr [rsi+160]', 'shl r8, 3', 'shl byte ptr [rsi+6848], 0', 'mov qword ptr [rsi+6912], r10', 'vpunpckhwd ymm6, ymm1, ymmword ptr [rsi+320]', 'and r13, r9', 'cmp r11, rbx']
+RMWWHY = {
+   'why_add32_64':       ('mov ecx, 1', 'add dword ptr [rsi+64], ecx'),
+   'why_add32_6848':     ('mov ecx, 1', 'add dword ptr [rsi+6848], ecx'),
+   'why_shl8_3_6848':    ('', 'shl byte ptr [rsi+6848], 3'),
+   'why_shl8_0_6848':    ('', 'shl byte ptr [rsi+6848], 0'),
+   'why_shl8_0_64':      ('', 'shl byte ptr [rsi+64], 0'),
+   'why_0895':           ('', '\n'.join(_F0895)),
+}
+for _j in range(len(_F0895)):
+   if _j != 2: RMWWHY['why_0895_no%d' % _j] = ('', '\n'.join(_F0895[:_j] + _F0895[_j + 1:]))
+RMWWHY['why_0895_shl3'] = ('', '\n'.join(_F0895[:2] + ['shl byte ptr [rsi+6848], 3'] + _F0895[3:]))
+RMWWHY['why_add32_st_next'] = ('mov ecx, 1', 'add dword ptr [rsi+6848], ecx\nmov qword ptr [rsi+6912], r10')
+RMWWHY['why_add32_st_far'] = ('mov ecx, 1', 'add dword ptr [rsi+6848], ecx\nmov qword ptr [rsi+4096], r10')
+RMWWHY['why_add32_st_before'] = ('mov ecx, 1', 'mov qword ptr [rsi+6912], r10\nadd dword ptr [rsi+6848], ecx')
+if os.environ.get('SET') == 'rmwwhy':
+   TESTS = RMWWHY
+   OUT = OUT + '_rmwwhy'
+# Read-modify-write chains with a separate store and reload in the same loop (select with SET=rmwpair)
+RMWPAIR = {}
+for _name, _rmw in [('add32reg', 'add dword ptr [rsi+64], ecx'), ('add16imm', 'add word ptr [rsi+64], 3'), ('shl32', 'shl dword ptr [rsi+64], 3'),
+                    ('shl16cl', 'shl word ptr [rsi+64], cl'), ('rcl8', 'rcl byte ptr [rsi+64], 2')]:
+   RMWPAIR['pair_%s_none' % _name] = ('mov ecx, 1', _rmw)
+   RMWPAIR['pair_%s_gpr' % _name] = ('mov ecx, 1', '\n'.join([_rmw, 'mov qword ptr [rsi+1024], rax', 'mov rbx, qword ptr [rsi+1024]']))
+   RMWPAIR['pair_%s_narrow' % _name] = ('mov ecx, 1', '\n'.join([_rmw, 'mov qword ptr [rsi+1024], rax', 'mov ebx, dword ptr [rsi+1024]']))
+   RMWPAIR['pair_%s_loadop' % _name] = ('mov ecx, 1', '\n'.join([_rmw, 'mov qword ptr [rsi+1024], rax', 'add rbx, qword ptr [rsi+1024]']))
+   RMWPAIR['pair_%s_first' % _name] = ('mov ecx, 1', '\n'.join(['mov qword ptr [rsi+1024], rax', 'mov rbx, qword ptr [rsi+1024]', _rmw]))
+   RMWPAIR['pair_%s_split' % _name] = ('mov ecx, 1', '\n'.join(['mov qword ptr [rsi+1024], rax', _rmw, 'mov rbx, qword ptr [rsi+1024]']))
+if os.environ.get('SET') == 'rmwpair':
+   TESTS = RMWPAIR
+   OUT = OUT + '_rmwpair'
 # Register moves: same register (never eliminated) and zero-extending moves that may be eliminated (select with SET=movs)
 MOVS = {
    'mov_samereg32':  ('', 'mov r11d, r11d\nsub r11, r12'),
