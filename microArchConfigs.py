@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -60,6 +60,10 @@ class MicroArchConfig:
       # directly from the register that the store read. None: not supported; 'data': the instructions are marked in the instruction data
       # (convertXML.py); 'latency': read-modify-write instructions for which uops.info measured a memory-to-memory latency of at most 1 cycle
       self.memoryRenaming = memoryRenaming
+      # if set: the number of different cache lines that loads can access per cycle; loads to the same line at different offsets share an access.
+      # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
+      # cache line at a different offset (see instructions.py).
+      self.loadLineSlots = loadLineSlots
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
@@ -269,7 +273,7 @@ MicroArchConfigs['ADL-P'].moveEliminationGPRSlots = 'unlimited'
 # LSD: measured on a Core i7-12650H with perf (zenbench/lsd_experiment.py): loops of nops with up to 35 uops are delivered by the LSD, and
 # their cycle counts are explained by these unroll counts (for loops with fewer than 7 uops, the count cannot be determined this way).
 MicroArchConfigs['ADL-P'].LSDEnabled = True
-MicroArchConfigs['ADL-P'].LSDUnrolling = dict([(7, 9), (8, 9)] + [(n, 5) for n in range(9, 19)] + [(n, 3) for n in range(19, 33)] + [(n, 2) for n in range(33, 36)])
+MicroArchConfigs['ADL-P'].LSDUnrolling = dict([(n, 6) for n in range(1, 7)] + [(7, 9), (8, 9)] + [(n, 5) for n in range(9, 19)] + [(n, 3) for n in range(19, 33)] + [(n, 2) for n in range(33, 36)])
 MicroArchConfigs['ADL-P'].loadPorts = '23A'
 MicroArchConfigs['ADL-P'].fusiblePorts = '237A'
 MicroArchConfigs['ADL-P'].portAssignment = 'ICL'
@@ -277,6 +281,11 @@ MicroArchConfigs['ADL-P'].renameImmediateFolding = True
 # perf, Core i7-12650H: the (macro-fused) branch at the end of a loop is always executed on port 6, while branches that are not taken
 # also use port 0 (e.g., zenbench loops imul_indep3 and test_jcc3)
 MicroArchConfigs['ADL-P'].takenBranchPort = '6'
+# perf, Core i7-12650H (zenbench/smallloop_experiment.py, measurements/adl-p_i7-12650H/perf_loads.json): three loads per cycle only if they
+# access at most two cache lines, e.g., [rsi], [rsi+8], [rsi+64]: 1 cycle; [rsi], [rsi+64], [rsi+128] or three loads from [rsi]: 1.5 cycles.
+# Loops with fewer than 7 uops: their cycle counts (e.g., 5 uops: 1.25-1.32 cycles) are explained if the LSD unrolls them (here: 6 times), so
+# that uops of different iterations are issued in the same cycle.
+MicroArchConfigs['ADL-P'].loadLineSlots = 2
 # perf, Core i7-12650H (zenbench SET=rmw): e.g., 'add dword ptr [rsi+64], 3' and 'add byte ptr [rsi+64], 3' run at 1 cycle per iteration, while the
 # forms with a register source and the 16-bit forms take more than 7 cycles. This agrees with the memory-to-memory latencies measured by
 # uops.info (1 vs. 6 or more cycles).

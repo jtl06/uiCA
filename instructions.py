@@ -377,6 +377,22 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
 
       instructions.append(instruction)
 
+   if uArchConfig.loadLineSlots:
+      def lineAndOffset(memAddr):
+         disp = memAddr.get('disp') or 0
+         return (memAddr.get('base'), memAddr.get('index'), memAddr.get('scale'), disp // 64), disp
+      loads = [(instr, lineAndOffset(memOp.memAddr)) for instr in instructions for memOp in instr.inputMemOperands]
+      restrictedPorts = uArchConfig.loadPorts[uArchConfig.loadLineSlots:]
+      for instr, (line, offset) in loads:
+         if any((l == line) and (o != offset) for i2, (l, o) in loads if i2 is not instr):
+            continue
+         instr.portData = dict(instr.portData)
+         for pc, n in list(instr.portData.items()):
+            if all(p in pc for p in uArchConfig.loadPorts):
+               del instr.portData[pc]
+               newPc = ''.join(p for p in pc if p not in restrictedPorts)
+               instr.portData[newPc] = instr.portData.get(newPc, 0) + n
+
    if len(instructions) > 0:
       instructions[-1].isLastInstr = True
       if uArchConfig.takenBranchPort and instructions[-1].isBranchInstr:
