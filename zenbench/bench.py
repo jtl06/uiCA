@@ -246,6 +246,14 @@ V2G = {
    'rt_movq_add':    (FP_INIT, 'vmovq xmm0, rax\nvpaddq xmm0, xmm0, xmm8\nvmovq rax, xmm0'),
    'rt_movq_add_g':  (FP_INIT, 'vmovq xmm0, rax\nvmovq rax, xmm0\nadd rax, 1'),
 }
+_AD = ['add rax, 1', 'add rbx, 1', 'add rcx, 1', 'add rdi, 1', 'add r9, 1', 'add r10, 1', 'add r11, 1']
+for _n, _m in [('movq', 'vmovq rdx, xmm8'), ('movmsk', 'vmovmskpd edx, xmm8'), ('pextrd', 'vpextrd edx, xmm8, 1'), ('cvt', 'vcvttsd2si rdx, xmm8')]:
+   for _k in (0, 2, 3, 4, 5, 6, 7):
+      V2G['v2gi_%s_%d' % (_n, _k)] = (FP_INIT, '\n'.join([_m] + _AD[:_k]))
+for _k in (2, 3, 4, 5, 6, 7):
+   V2G['v2gi_none_%d' % _k] = (FP_INIT, '\n'.join(_AD[:_k]))
+V2G['v2gi_g2v_4'] = (FP_INIT, '\n'.join(['vmovq xmm0, rdx'] + _AD[:4]))
+V2G['v2gi_movq_ld4'] = (FP_INIT, '\n'.join(['vmovq rdx, xmm8'] + ['mov r%d, qword ptr [rsi+%d]' % (r, 8 * r) for r in (9, 10, 11, 12)]))
 if os.environ.get('SET') == 'v2g':
    TESTS = V2G
    OUT = OUT + '_v2g'

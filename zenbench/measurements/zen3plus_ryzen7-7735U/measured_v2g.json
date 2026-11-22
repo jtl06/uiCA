@@ -1,42 +1,222 @@
 {
  "rt_movq": {
-  "cycles": 6.00478565,
-  "instr": 4.00000325,
-  "expectedInstr": 4
- },
- "rt_movd_sse": {
-  "cycles": 6.0048195,
+  "cycles": 6.00489095,
   "instr": 4.00000315,
   "expectedInstr": 4
  },
+ "rt_movd_sse": {
+  "cycles": 6.004989,
+  "instr": 4.0000032,
+  "expectedInstr": 4
+ },
  "rt_pinsr_pextr": {
-  "cycles": 8.0053363,
+  "cycles": 8.00562655,
   "instr": 4.00000385,
   "expectedInstr": 4
  },
  "rt_movq_pextr": {
-  "cycles": 7.004734,
-  "instr": 4.00000315,
+  "cycles": 7.00483645,
+  "instr": 4.0000028,
   "expectedInstr": 4
  },
  "rt_cvt": {
-  "cycles": 13.0025109,
-  "instr": 4.0000042,
+  "cycles": 13.0027221,
+  "instr": 4.00000405,
   "expectedInstr": 4
  },
  "rt_movq_msk": {
-  "cycles": 6.00434425,
-  "instr": 4.00000265,
+  "cycles": 6.0045662,
+  "instr": 4.0000026,
   "expectedInstr": 4
  },
  "rt_movq_add": {
-  "cycles": 7.0046084,
+  "cycles": 7.00480145,
   "instr": 5.0000028,
   "expectedInstr": 5
  },
  "rt_movq_add_g": {
-  "cycles": 7.00459685,
-  "instr": 5.0000029,
+  "cycles": 7.0048418,
+  "instr": 5.0000028,
   "expectedInstr": 5
+ },
+ "v2gi_movq_0": {
+  "cycles": 1.0033372,
+  "instr": 3.00000145,
+  "expectedInstr": 3
+ },
+ "v2gi_movq_2": {
+  "cycles": 1.6998534,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "v2gi_movq_3": {
+  "cycles": 2.0030969,
+  "instr": 6.0000016,
+  "expectedInstr": 6
+ },
+ "v2gi_movq_4": {
+  "cycles": 2.10353075,
+  "instr": 7.0000017,
+  "expectedInstr": 7
+ },
+ "v2gi_movq_5": {
+  "cycles": 2.34707715,
+  "instr": 8.0000018,
+  "expectedInstr": 8
+ },
+ "v2gi_movq_6": {
+  "cycles": 2.582567,
+  "instr": 9.0000018,
+  "expectedInstr": 9
+ },
+ "v2gi_movq_7": {
+  "cycles": 2.81925565,
+  "instr": 10.0000018,
+  "expectedInstr": 10
+ },
+ "v2gi_movmsk_0": {
+  "cycles": 1.63392795,
+  "instr": 3.00000165,
+  "expectedInstr": 3
+ },
+ "v2gi_movmsk_2": {
+  "cycles": 1.72894305,
+  "instr": 5.0000016,
+  "expectedInstr": 5
+ },
+ "v2gi_movmsk_3": {
+  "cycles": 2.00312845,
+  "instr": 6.0000016,
+  "expectedInstr": 6
+ },
+ "v2gi_movmsk_4": {
+  "cycles": 2.254125,
+  "instr": 7.0000018,
+  "expectedInstr": 7
+ },
+ "v2gi_movmsk_5": {
+  "cycles": 2.5047177,
+  "instr": 8.0000018,
+  "expectedInstr": 8
+ },
+ "v2gi_movmsk_6": {
+  "cycles": 2.7549598,
+  "instr": 9.0000019,
+  "expectedInstr": 9
+ },
+ "v2gi_movmsk_7": {
+  "cycles": 3.0052651,
+  "instr": 10.00000195,
+  "expectedInstr": 10
+ },
+ "v2gi_pextrd_0": {
+  "cycles": 1.00340605,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "v2gi_pextrd_2": {
+  "cycles": 1.72623215,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "v2gi_pextrd_3": {
+  "cycles": 2.00325745,
+  "instr": 6.0000017,
+  "expectedInstr": 6
+ },
+ "v2gi_pextrd_4": {
+  "cycles": 2.20323455,
+  "instr": 7.0000018,
+  "expectedInstr": 7
+ },
+ "v2gi_pextrd_5": {
+  "cycles": 2.4788686,
+  "instr": 8.00000185,
+  "expectedInstr": 8
+ },
+ "v2gi_pextrd_6": {
+  "cycles": 2.6721611,
+  "instr": 9.00000195,
+  "expectedInstr": 9
+ },
+ "v2gi_pextrd_7": {
+  "cycles": 3.00536535,
+  "instr": 10.0000019,
+  "expectedInstr": 10
+ },
+ "v2gi_cvt_0": {
+  "cycles": 1.0013112,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "v2gi_cvt_2": {
+  "cycles": 1.64303425,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "v2gi_cvt_3": {
+  "cycles": 2.0032667,
+  "instr": 6.0000016,
+  "expectedInstr": 6
+ },
+ "v2gi_cvt_4": {
+  "cycles": 2.203423,
+  "instr": 7.0000017,
+  "expectedInstr": 7
+ },
+ "v2gi_cvt_5": {
+  "cycles": 2.4836749,
+  "instr": 8.0000018,
+  "expectedInstr": 8
+ },
+ "v2gi_cvt_6": {
+  "cycles": 2.6716841,
+  "instr": 9.0000018,
+  "expectedInstr": 9
+ },
+ "v2gi_cvt_7": {
+  "cycles": 3.0057356,
+  "instr": 10.0000021,
+  "expectedInstr": 10
+ },
+ "v2gi_none_2": {
+  "cycles": 1.0021008,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ },
+ "v2gi_none_3": {
+  "cycles": 1.00234595,
+  "instr": 5.00000145,
+  "expectedInstr": 5
+ },
+ "v2gi_none_4": {
+  "cycles": 1.2519299,
+  "instr": 6.00000145,
+  "expectedInstr": 6
+ },
+ "v2gi_none_5": {
+  "cycles": 1.5032263,
+  "instr": 7.00000155,
+  "expectedInstr": 7
+ },
+ "v2gi_none_6": {
+  "cycles": 2.0027706,
+  "instr": 8.0000017,
+  "expectedInstr": 8
+ },
+ "v2gi_none_7": {
+  "cycles": 2.00327135,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "v2gi_g2v_4": {
+  "cycles": 1.5017941,
+  "instr": 7.0000015,
+  "expectedInstr": 7
+ },
+ "v2gi_movq_ld4": {
+  "cycles": 1.33684575,
+  "instr": 7.00000155,
+  "expectedInstr": 7
  }
 }
