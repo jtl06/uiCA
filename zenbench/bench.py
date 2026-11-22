@@ -249,6 +249,60 @@ V2G = {
 if os.environ.get('SET') == 'v2g':
    TESTS = V2G
    OUT = OUT + '_v2g'
+# Microcoded instructions with a low measured throughput (TP_MS in convertXML.py), alone and with independent integer instructions (select with SET=tpms)
+TPMS = {}
+for _n, _i in [('aeskga', 'aeskeygenassist xmm0, xmm8, 1'), ('rcl3', 'rcl eax, 3'), ('rcrcl', 'mov ecx, 2\nrcr rdx, cl'), ('rcl8', 'rcl r8b, 3'),
+               ('cmpxchg', 'cmpxchg rdx, rdi'), ('dpps', 'dpps xmm0, xmm8, 0xff'), ('pcmpestri', 'mov eax, 8\nmov edx, 8\npcmpestri xmm8, xmm9, 1')]:
+   TPMS['tpms_%s' % _n] = (FP_INIT, _i)
+   TPMS['tpms_%s_int4' % _n] = (FP_INIT, '\n'.join([_i, 'add rbx, 1', 'add r9, 1', 'add r10, 1', 'add r11, 1']))
+if os.environ.get('SET') == 'tpms':
+   TESTS = TPMS
+   OUT = OUT + '_tpms'
+# Zen 3 op cache: which property of a loop of 8 macro-ops (3 ALU, 2 loads, 2 vector, dec/jnz; ideal 1.33 cycles per iteration) makes it
+# need two entries per iteration: size (redundant DS prefixes), 32-bit displacements, 32-bit immediates (select with SET=opc)
+OPC = {}
+def _opc(pre, d32, i32):
+   alu = []
+   for j, (a, b) in enumerate([('rax', 'rbx'), ('rcx', 'rdx'), ('rdi', 'r11')]):
+      ins = ('add %s, 0x12345' % a) if j < i32 else ('add %s, %s' % (a, b))
+      alu.append(('.byte 0x3e, 0x3e\n' + ins) if j < pre else ins)
+   ld = ['mov r9, qword ptr [rsi+%s]' % ('0x400' if d32 > 0 else '8'), 'mov r10, qword ptr [rsi+%s]' % ('0x440' if d32 > 1 else '16')]
+   return (FP_INIT, '\n'.join(alu[:2] + ld[:1] + ['vpaddd xmm0, xmm8, xmm9'] + alu[2:] + ld[1:] + ['vpaddd xmm1, xmm8, xmm9']))
+for _pre in range(4):
+   for _d32 in range(3):
+      OPC['opc_p%d_d%d_i0' % (_pre, _d32)] = _opc(_pre, _d32, 0)
+for _i32 in range(1, 4):
+   for _d32 in range(3):
+      OPC['opc_p0_d%d_i%d' % (_d32, _i32)] = _opc(0, _d32, _i32)
+def _opc2(alu_ins, vec_ins, ld=('mov r9, qword ptr [rsi+8]', 'mov r10, qword ptr [rsi+16]')):
+   alu = alu_ins + ['add rax, rbx', 'add rcx, rdx', 'add rdi, r11'][len(alu_ins):]
+   vec = vec_ins + ['vpaddd xmm0, xmm8, xmm9', 'vpaddd xmm1, xmm8, xmm9'][len(vec_ins):]
+   return (FP_INIT, '\n'.join([alu[0], alu[1], ld[0], vec[0], alu[2], ld[1], vec[1]]))
+for _k in (1, 2, 3):
+   OPC['opc2_i8_%d' % _k] = _opc2(['add rax, 5', 'add rcx, 5', 'add rdi, 5'][:_k], [])
+   OPC['opc2_shl_%d' % _k] = _opc2(['shl rax, 3', 'shl rcx, 3', 'shl rdi, 3'][:_k], [])
+for _k in (1, 2):
+   OPC['opc2_v8_%d' % _k] = _opc2([], ['vpshufd xmm0, xmm8, 1', 'vpshufd xmm1, xmm8, 1'][:_k])
+OPC['opc2_i8_v8'] = _opc2(['add rax, 5'], ['vpshufd xmm0, xmm8, 1'])
+OPC['opc2_i32_i8'] = _opc2(['add rax, 0x12345', 'add rcx, 5'], [])
+OPC['opc2_i32_v8'] = _opc2(['add rax, 0x12345'], ['vpshufd xmm0, xmm8, 1'])
+OPC['opc2_i32_ld_i32'] = _opc2(['add rax, 0x12345'], [], ('mov r9, qword ptr [rsi+8]', 'add r10, 0x12345'))
+OPC['opc2_i8_d32x2'] = _opc2(['add rax, 5'], [], ('mov r9, qword ptr [rsi+0x400]', 'mov r10, qword ptr [rsi+0x440]'))
+OPC['opc2_i8x2_7ops'] = (FP_INIT, '\n'.join(['add rax, 5', 'add rcx, 5', 'mov r9, qword ptr [rsi+8]', 'vpaddd xmm0, xmm8, xmm9', 'add rdi, r11', 'vpaddd xmm1, xmm8, xmm9']))
+OPC['opc2_i8x3_6ops'] = (FP_INIT, '\n'.join(['add rax, 5', 'add rcx, 5', 'add rdi, 5', 'vpaddd xmm0, xmm8, xmm9', 'vpaddd xmm1, xmm8, xmm9']))
+# entries with fewer macro-ops and more fields (body + dec/jnz)
+def _opc3(nimm, nld, nplain):
+   ins = ['add %s, 5' % r for r in ('rax', 'rcx', 'rdi', 'rbx')[:nimm]] + ['mov %s, qword ptr [rsi+%d]' % (r, 8 * (j + 1)) for j, r in enumerate(('r9', 'r10', 'r12')[:nld])]
+   ins += ['vpaddd xmm%d, xmm8, xmm9' % j for j in range(nplain)]
+   return (FP_INIT, '\n'.join(ins))
+for _ops, _f in [(7, 4), (7, 5), (6, 4), (6, 5), (6, 6), (5, 5), (5, 6), (4, 5)]:
+   _body = _ops - 1
+   _nimm = min(4, _f); _nld = _f - _nimm
+   if _nld > 3: _nimm, _nld = _f - 3, 3
+   OPC['opc3_o%d_f%d' % (_ops, _f)] = _opc3(_nimm, _nld, _body - _nimm - _nld)
+if os.environ.get('SET') == 'opc':
+   TESTS = OPC
+   OUT = OUT + '_opc'
 # Register moves: same register (never eliminated) and zero-extending moves that may be eliminated (select with SET=movs)
 MOVS = {
    'mov_samereg32':  ('', 'mov r11d, r11d\nsub r11, r12'),

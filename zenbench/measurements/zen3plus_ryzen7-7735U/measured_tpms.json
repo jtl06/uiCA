@@ -1,0 +1,72 @@
+{
+ "tpms_aeskga": {
+  "cycles": 1.00124885,
+  "instr": 3.0000015,
+  "expectedInstr": 3
+ },
+ "tpms_aeskga_int4": {
+  "cycles": 1.2516519,
+  "instr": 7.0000016,
+  "expectedInstr": 7
+ },
+ "tpms_rcl3": {
+  "cycles": 4.00082455,
+  "instr": 3.0000025,
+  "expectedInstr": 3
+ },
+ "tpms_rcl3_int4": {
+  "cycles": 4.50096195,
+  "instr": 7.00000265,
+  "expectedInstr": 7
+ },
+ "tpms_rcrcl": {
+  "cycles": 3.00065335,
+  "instr": 4.0000022,
+  "expectedInstr": 4
+ },
+ "tpms_rcrcl_int4": {
+  "cycles": 4.00068015,
+  "instr": 8.0000022,
+  "expectedInstr": 8
+ },
+ "tpms_rcl8": {
+  "cycles": 4.00070485,
+  "instr": 3.0000022,
+  "expectedInstr": 3
+ },
+ "tpms_rcl8_int4": {
+  "cycles": 4.50076385,
+  "instr": 7.00000225,
+  "expectedInstr": 7
+ },
+ "tpms_cmpxchg": {
+  "cycles": 3.0004698,
+  "instr": 3.00000185,
+  "expectedInstr": 3
+ },
+ "tpms_cmpxchg_int4": {
+  "cycles": 3.50060645,
+  "instr": 7.00000205,
+  "expectedInstr": 7
+ },
+ "tpms_dpps": {
+  "cycles": 15.0082435,
+  "instr": 3.00000455,
+  "expectedInstr": 3
+ },
+ "tpms_dpps_int4": {
+  "cycles": 15.0082584,
+  "instr": 7.00000475,
+  "expectedInstr": 7
+ },
+ "tpms_pcmpestri": {
+  "cycles": 3.0035616,
+  "instr": 5.00000185,
+  "expectedInstr": 5
+ },
+ "tpms_pcmpestri_int4": {
+  "cycles": 4.0046558,
+  "instr": 9.0000022,
+  "expectedInstr": 9
+ }
+}

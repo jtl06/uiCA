@@ -1,0 +1,222 @@
+{
+ "opc_p0_d0_i0": {
+  "cycles": 1.33510545,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p0_d1_i0": {
+  "cycles": 1.33512635,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p0_d2_i0": {
+  "cycles": 1.33514225,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p1_d0_i0": {
+  "cycles": 1.3351474,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p1_d1_i0": {
+  "cycles": 1.3351813,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p1_d2_i0": {
+  "cycles": 1.33513735,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p2_d0_i0": {
+  "cycles": 1.3351606,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p2_d1_i0": {
+  "cycles": 1.3351556,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p2_d2_i0": {
+  "cycles": 1.33515985,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p3_d0_i0": {
+  "cycles": 1.33517685,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p3_d1_i0": {
+  "cycles": 1.33506585,
+  "instr": 9.00000155,
+  "expectedInstr": 9
+ },
+ "opc_p3_d2_i0": {
+  "cycles": 1.33512885,
+  "instr": 9.00000155,
+  "expectedInstr": 9
+ },
+ "opc_p0_d0_i1": {
+  "cycles": 1.33506255,
+  "instr": 9.00000155,
+  "expectedInstr": 9
+ },
+ "opc_p0_d1_i1": {
+  "cycles": 1.33505935,
+  "instr": 9.0000015,
+  "expectedInstr": 9
+ },
+ "opc_p0_d2_i1": {
+  "cycles": 1.335131,
+  "instr": 9.0000016,
+  "expectedInstr": 9
+ },
+ "opc_p0_d0_i2": {
+  "cycles": 2.0022698,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p0_d1_i2": {
+  "cycles": 2.00224255,
+  "instr": 9.00000175,
+  "expectedInstr": 9
+ },
+ "opc_p0_d2_i2": {
+  "cycles": 2.0022738,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p0_d0_i3": {
+  "cycles": 2.00231615,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p0_d1_i3": {
+  "cycles": 2.00230445,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc_p0_d2_i3": {
+  "cycles": 2.00225965,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc2_i8_1": {
+  "cycles": 1.33506565,
+  "instr": 9.0000016,
+  "expectedInstr": 9
+ },
+ "opc2_shl_1": {
+  "cycles": 1.33509335,
+  "instr": 9.00000155,
+  "expectedInstr": 9
+ },
+ "opc2_i8_2": {
+  "cycles": 2.0022931,
+  "instr": 9.00000175,
+  "expectedInstr": 9
+ },
+ "opc2_shl_2": {
+  "cycles": 2.00232915,
+  "instr": 9.00000175,
+  "expectedInstr": 9
+ },
+ "opc2_i8_3": {
+  "cycles": 2.00225105,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc2_shl_3": {
+  "cycles": 2.0023005,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc2_v8_1": {
+  "cycles": 1.3350612,
+  "instr": 9.00000155,
+  "expectedInstr": 9
+ },
+ "opc2_v8_2": {
+  "cycles": 2.0022821,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc2_i8_v8": {
+  "cycles": 2.0022624,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc2_i32_i8": {
+  "cycles": 2.00228535,
+  "instr": 9.00000165,
+  "expectedInstr": 9
+ },
+ "opc2_i32_v8": {
+  "cycles": 2.00229755,
+  "instr": 9.0000017,
+  "expectedInstr": 9
+ },
+ "opc2_i32_ld_i32": {
+  "cycles": 1.33507725,
+  "instr": 9.0000015,
+  "expectedInstr": 9
+ },
+ "opc2_i8_d32x2": {
+  "cycles": 1.33510355,
+  "instr": 9.0000016,
+  "expectedInstr": 9
+ },
+ "opc2_i8x2_7ops": {
+  "cycles": 1.1682231,
+  "instr": 8.00000155,
+  "expectedInstr": 8
+ },
+ "opc2_i8x3_6ops": {
+  "cycles": 1.00130175,
+  "instr": 7.0000014,
+  "expectedInstr": 7
+ },
+ "opc3_o7_f4": {
+  "cycles": 1.2516104,
+  "instr": 8.0000015,
+  "expectedInstr": 8
+ },
+ "opc3_o7_f5": {
+  "cycles": 1.28155035,
+  "instr": 8.0000016,
+  "expectedInstr": 8
+ },
+ "opc3_o6_f4": {
+  "cycles": 1.251571,
+  "instr": 7.00000145,
+  "expectedInstr": 7
+ },
+ "opc3_o6_f5": {
+  "cycles": 1.25028535,
+  "instr": 7.0000015,
+  "expectedInstr": 7
+ },
+ "opc3_o6_f6": {
+  "cycles": 2.00047365,
+  "instr": 8.0000018,
+  "expectedInstr": 8
+ },
+ "opc3_o5_f5": {
+  "cycles": 1.2502868,
+  "instr": 7.0000015,
+  "expectedInstr": 7
+ },
+ "opc3_o5_f6": {
+  "cycles": 2.0003373,
+  "instr": 8.00000165,
+  "expectedInstr": 8
+ },
+ "opc3_o4_f5": {
+  "cycles": 1.2503022,
+  "instr": 7.00000155,
+  "expectedInstr": 7
+ }
+}

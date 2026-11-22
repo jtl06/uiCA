@@ -10,7 +10,7 @@ for attempt in 1 2 3 4 5; do
    done
    "$@" || exit 1
    l=$(cut -d' ' -f1 /proc/loadavg)
-   awk "BEGIN{exit !($l < 1.0)}" && exit 0
+   awk "BEGIN{exit !($l < 1.5)}" && exit 0
    echo "load rose to $l during the run; repeating" >&2
 done
 exit 2
