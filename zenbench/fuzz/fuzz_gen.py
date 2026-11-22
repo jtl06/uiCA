@@ -14,6 +14,13 @@ Rules that keep the loops safe to run and their timing independent of data:
   * vector registers 8-15 hold constants and are only read
 Loops are tagged (vector mode, load, store, rmw, value-dependent probe such as FP division) so that results can be reported per tag.
 
+Profiles (environment variable FUZZ_PROFILE):
+  default: as described above
+  mem:     4-10 fillers instead of 2-5; loads also at offsets within a cache line (aligned to their size) and, in a quarter of the cases,
+           with an index register that advances in every iteration ([rsi+r14+disp]; 'add r14, 64; and r14, 448' at the end of the loop);
+           in half of the loops a store and a later load from the same address (64-bit, load-op, 32-bit load of a 64-bit store, or vector),
+           in a separate region of the buffer (tag 'stfwd')
+
 Usage: fuzz_gen.py XMLFILE SEED COUNT OUTDIR METADATA_JSON [ARCH ...]     (default architectures: ZEN3 ADL-P)
 """
 import collections, json, os, random, re, subprocess, sys
@@ -75,11 +82,42 @@ def loadPool(xmlFile, archs):
                    'mode': ('avx' if a.get('vex') == '1' else 'sse') if vec else 'int'})
    return pool, dropped
 
+PROFILE = os.environ.get('FUZZ_PROFILE', 'default')
+
 class LoopBuilder:
    def __init__(self, rnd):
       self.rnd = rnd
       self.storeSlots = list(range(16)); rnd.shuffle(self.storeSlots)
+      self.pairSlots = list(range(16))
+      if PROFILE == "mem": rnd.shuffle(self.pairSlots)
       self.tags = set()
+      self.usesIndex = False
+
+   def loadAddress(self, o):
+      rnd = self.rnd
+      if PROFILE != 'mem':
+         return '[RSI+%d]' % (64 * rnd.randrange(16))
+      size = max(8, min(64, int(o.get('width', '64')) // 8))
+      if rnd.random() < 0.25:
+         self.usesIndex = True
+         self.tags.add('index')
+         return '[RSI+R14+%d]' % (64 * rnd.randrange(8) + size * rnd.randrange(64 // size))
+      return '[RSI+%d]' % (64 * rnd.randrange(16) + size * rnd.randrange(64 // size))
+
+   def pair(self, mode):
+      # a store and a later load from the same address
+      rnd = self.rnd
+      off = 4096 + 3072 + 64 * self.pairSlots.pop()
+      kinds = ['gpr', 'loadop', 'narrow'] + (['vec'] if mode != 'int' else [])
+      kind = rnd.choice(kinds)
+      self.tags.add('stfwd')
+      if kind == 'vec':
+         mov = 'VMOVAPS' if mode == 'avx' else 'MOVAPS'
+         return ('%s xmmword ptr [RSI+%d], XMM%d' % (mov, off, rnd.randrange(16)), '%s XMM%d, xmmword ptr [RSI+%d]' % (mov, rnd.randrange(8), off))
+      store = 'MOV qword ptr [RSI+%d], %s' % (off, rnd.choice(GPR[64]))
+      if kind == 'gpr': return (store, 'MOV %s, qword ptr [RSI+%d]' % (rnd.choice(GPR[64]), off))
+      if kind == 'loadop': return (store, 'ADD %s, qword ptr [RSI+%d]' % (rnd.choice(GPR[64]), off))
+      return (store, 'MOV %s, dword ptr [RSI+%d]' % (rnd.choice(GPR[32]), off))
 
    def asm(self, e):
       rnd = self.rnd
@@ -97,10 +135,10 @@ class LoopBuilder:
             if o.get('w') == '1':
                off = 4096 + 2048 + 64 * self.storeSlots.pop()
                self.tags.add('rmw' if o.get('r') == '1' else 'store')
+               parts.append((o.get('memory-prefix', '') + ' [RSI+%d]' % off).strip())
             else:
-               off = 64 * rnd.randrange(16)
                self.tags.add('load')
-            parts.append((o.get('memory-prefix', '') + ' [RSI+%d]' % off).strip())
+               parts.append((o.get('memory-prefix', '') + ' ' + self.loadAddress(o)).strip())
          elif o['type'] == 'agen':
             g = e['agen']; addr = []
             if 'R' in g: return None
@@ -140,6 +178,7 @@ mov r11, 0x123
 mov r12, 0xabcdef
 mov r13, 0x99
 lea rsi, [rip+buf]
+xor r14d, r14d
 {vecInit}mov r15, NITER
 .balign 64
 l:
@@ -185,10 +224,17 @@ def main():
       if rnd.random() < 0.4:
          probes.append(rnd.choice([e for e in pool if e['mode'] in ('int', mode)]))
       b = LoopBuilder(rnd)
-      entries = probes + [rnd.choice(fillers) for _ in range(rnd.randint(2, 5))]
+      entries = probes + [rnd.choice(fillers) for _ in range(rnd.randint(4, 10) if PROFILE == 'mem' else rnd.randint(2, 5))]
       rnd.shuffle(entries)
       lines = [b.asm(e) for e in entries]
       if any(l is None for l in lines): stats['unusable operand'] += 1; continue
+      if PROFILE == 'mem':
+         if rnd.random() < 0.5:
+            st, ld = b.pair(mode)
+            i = rnd.randrange(len(lines) + 1); lines.insert(i, st)
+            j = rnd.randrange(i + 1, len(lines) + 1); lines.insert(j, ld)
+         if b.usesIndex:
+            lines += ['ADD R14, 64', 'AND R14, 448'] # multiples of 64: keeps the alignment of the memory operands
       name = 's%d_%04d' % (seed, len(loops))
       p = os.path.join(outDir, name)
       with open(p + '.s', 'w') as f: f.write('.intel_syntax noprefix\nl:\n' + '\n'.join(lines) + '\ndec r15\njnz l\n')

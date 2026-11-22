@@ -1,0 +1,14 @@
+== ICL: 3000 loops generated, 2889 compared; excluded: {'no prediction from llvm-mca icelake-server': 18, 'unstable measurement': 93}
+   uiCA ICX              2889 loops: mean   4.8%, median   1.0%, within 10%:  80.9%, too fast/too slow by >10%:  9.4% /  9.8%
+   uiCA ICL              2889 loops: mean   5.7%, median   1.0%, within 10%:  79.7%, too fast/too slow by >10%: 11.4% /  8.9%
+   stock uiCA ICL        2889 loops: mean   6.0%, median   1.1%, within 10%:  79.4%, too fast/too slow by >10%: 11.8% /  8.9%
+   llvm-mca icelake-server  2889 loops: mean  22.9%, median   8.5%, within 10%:  53.0%, too fast/too slow by >10%: 20.9% / 26.1%
+   by tag (uiCA ICX | llvm-mca icelake-server):
+      plain (no rmw, not value-dependent)  2533 loops: mean   4.3% |  21.5%   within 10%:  84.3% |  56.5%
+      int                                   395 loops: mean   6.5% |  30.1%   within 10%:  71.9% |  41.8%
+      sse                                  1077 loops: mean   4.8% |  25.0%   within 10%:  81.1% |  51.6%
+      avx                                  1417 loops: mean   4.4% |  19.3%   within 10%:  83.2% |  57.2%
+      load                                 2364 loops: mean   4.9% |  24.5%   within 10%:  80.7% |  52.4%
+      store                                 970 loops: mean   5.0% |  21.4%   within 10%:  80.4% |  55.3%
+      rmw                                   243 loops: mean  11.5% |  43.9%   within 10%:  42.4% |   6.2%
+      value-dependent                       118 loops: mean   3.6% |  10.9%   within 10%:  85.6% |  72.9%

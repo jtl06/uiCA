@@ -13,14 +13,16 @@ from multiprocessing import Pool
 HERE = os.path.dirname(os.path.abspath(__file__))
 UICA = os.path.join(HERE, '..', '..', 'uiCA.py')
 LLVM_MCA = os.environ.get('LLVM_MCA', 'llvm-mca-22')
-TOOLS = {'ZEN3': ['uiCA ZEN3', 'llvm-mca znver3'], 'ADL-P': ['uiCA ADL-P', 'uiCA RKL', 'llvm-mca alderlake'],
-         'ICL': ['uiCA ICL', 'llvm-mca icelake-server']} # ICL: reference; supported by uiCA upstream (uops.info data from client Ice Lake)
+# 'stock uiCA X': the upstream version of uiCA (a checkout of its master branch in STOCK_UICA_DIR, with its own instruction data)
+TOOLS = {'ZEN3': ['uiCA ZEN3', 'llvm-mca znver3'], 'ADL-P': ['uiCA ADL-P', 'stock uiCA RKL', 'llvm-mca alderlake'],
+         'ICL': ['uiCA ICX', 'uiCA ICL', 'stock uiCA ICL', 'llvm-mca icelake-server']} # measured on Ice Lake-SP; uops.info data is from client Ice Lake
+STOCK_UICA = os.path.join(os.environ.get('STOCK_UICA_DIR', os.path.join(HERE, '..', '..', '..', 'uiCA-master')), 'uiCA.py')
 
 def predict(job):
    tool, obj = job
    try:
-      if tool.startswith('uiCA'):
-         r = subprocess.run([sys.executable, UICA, obj, '-arch', tool.split()[1], '-TPonly'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True, timeout=300)
+      if tool.startswith('uiCA') or tool.startswith('stock uiCA'):
+         r = subprocess.run([sys.executable, STOCK_UICA if tool.startswith('stock') else UICA, obj, '-arch', tool.split()[-1], '-TPonly'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True, timeout=300)
          return float(r.stdout.strip().splitlines()[-1])
       # llvm-mca: the encoding hints ({load}, {store}) are not needed
       src = re.sub(r'\{(load|store)\} ', '', open(obj[:-2] + '.s').read())
