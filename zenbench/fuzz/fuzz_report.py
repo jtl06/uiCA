@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Compare predictions with the measurements of the random loops (fuzz_gen.py, fuzz_measure.py).
 
-A loop is excluded for a machine if its smoke run or measurement failed, if the measured number of instructions per iteration differs from
+A loop is excluded for a machine if it has a tag 'exclude:REASON' (see real/bhive_gen.py), if its smoke run or measurement failed, if the measured number of instructions per iteration differs from
 the expected one, or if the two fastest of the measurement runs differ by more than 2%. Loops are never excluded because of a prediction.
 Tools are compared on the loops for which all of them produced a prediction.
 
-Usage: fuzz_report.py METADATA_JSON OBJ_DIR PREDICTIONS_CACHE_JSON ARCH=MEASURED_JSON ... [-details]
-       (-details: also list the mnemonics and loops with the largest errors; use this only for the set that is used for development)
+Usage: fuzz_report.py METADATA_JSON OBJ_DIR PREDICTIONS_CACHE_JSON ARCH=MEASURED_JSON ... [-details] [-only=TAG]
+       (-details: also list the mnemonics and loops with the largest errors; use this only for the set that is used for development;
+        -only=TAG: score only the loops with this tag, e.g. -only=dev for the real-code blocks of real/bhive_gen.py)
 """
 import collections, json, os, re, statistics, subprocess, sys
 from multiprocessing import Pool
@@ -57,8 +58,9 @@ def summary(errs):
       len(a), statistics.mean(a), statistics.median(a), 100.0 * sum(x <= 10 for x in a) / len(a), 100.0 * sum(e < -10 for e in errs) / len(a), 100.0 * sum(e > 10 for e in errs) / len(a))
 
 def main():
-   args = [a for a in sys.argv[1:] if a != '-details']
+   args = [a for a in sys.argv[1:] if a != '-details' and not a.startswith('-only=')]
    details = '-details' in sys.argv
+   only = [a[6:] for a in sys.argv[1:] if a.startswith('-only=')]
    meta, objDir, cacheFile = json.load(open(args[0])), args[1], args[2]
    measured = {a.split('=')[0]: json.load(open(a.split('=')[1])) for a in args[3:]}
    cache = json.load(open(cacheFile)) if os.path.exists(cacheFile) else {}
@@ -74,6 +76,9 @@ def main():
       tools = TOOLS[arch]
       excl = collections.Counter(); rows = []
       for l in meta['loops']:
+         if only and only[0] not in l['tags']: continue
+         ex = [t for t in l['tags'] if t.startswith('exclude:')]
+         if ex: excl[ex[0][8:]] += 1; continue
          v = m.get(l['name'])
          if v is None or 'error' in v: excl['run failed'] += 1; continue
          if abs(v['instructions'] - l['instructions']) > 0.01: excl['instruction count differs'] += 1; continue
@@ -89,6 +94,7 @@ def main():
       print('   by tag (%s | %s):' % (tools[0], tools[-1]))
       tagsets = [('plain (no rmw, not value-dependent)', lambda l: 'rmw' not in l['tags'] and 'value-dependent' not in l['tags'])]
       tagsets += [(t, (lambda l, t=t: t in l['tags'])) for t in ['int', 'sse', 'avx', 'load', 'store', 'rmw', 'value-dependent']]
+      tagsets += [(t, (lambda l, t=t: t in l['tags'])) for t in sorted(set(t for l in meta['loops'] for t in l['tags'] if ':' in t))]
       for name, f in tagsets:
          rs = [r for r in rows if f(r[0])]
          if len(rs) < 3: continue

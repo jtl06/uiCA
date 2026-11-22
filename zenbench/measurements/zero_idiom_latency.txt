@@ -1,0 +1,24 @@
+# zenbench/zero_idiom_test.sh, cycles per iteration (perf), 2026-11-22
+# Xeon Gold 6314U (Ice Lake-SP, diomedea, cpu 20): a vector integer instruction that reads a register zeroed by an idiom (vpxor/vpsubd x,x,x)
+# or a register in its initial state (never written since the process started) has a latency of 4 instead of 1 on the path through its other
+# input. A zero loaded from memory does not have this effect, nor does a GPR zero idiom; throughput is not affected. The first run after the
+# core was idle for a few seconds is fast (1.05; reproducible with 'sleep 10'); every following run is slow.
+# Ryzen 7 7735U and Core i7-12650H: no such effect (zero_idiom, acc_zero: 1.00 / 1.03; mixed_zero 2.00).
+# Consequence for measurements on Ice Lake-SP: initialize vector registers from memory (fuzz/fuzz_gen.py and real/bhive_gen.py do).
+zero_idiom    4.00   (first run after idle: 1.05)
+zero_load     1.00
+one_load      1.00
+ones_idiom    1.00
+acc_zero      4.00
+uninit        4.00   (first run after idle: 1.04)
+mixed_zero    8.00   (two inputs zeroed: 4 + 4)
+gpr_zidiom    1.00
+tp_zero       1.34   (= tp_load: throughput not affected)
+tp_load       1.34
+ymm_zero      4.00
+zmm_zero      4.00
+logic_zero    4.00   (vpor)
+shuf_zero     2.51   (vpshufb)
+fp_zero       4.00   (vaddps: its normal latency)
+movd_zero     8.00
+movd_load     5.00
