@@ -42,6 +42,17 @@ AMD_MACRO_FUSIBLE_ICLASSES = ['CMP', 'TEST', 'ADD', 'SUB', 'AND', 'OR', 'XOR', '
 amdStats = defaultdict(lambda: defaultdict(int))
 amdTPMismatches = defaultdict(list)
 
+AMD_CROSS_DOMAIN_BOUND_CORRECTION = 2
+
+def crossesDomains(XMLInstr, latNode):
+   # whether the latency is between a general-purpose and a vector register
+   def domain(idx):
+      o = XMLInstr.find('./operand[@idx="%s"]' % idx)
+      if (o is None) or (o.attrib.get('type') != 'reg'): return None
+      return 'vec' if 'MM' in (o.text or '') else 'gpr'
+   d1, d2 = domain(latNode.attrib['start_op']), domain(latNode.attrib['target_op'])
+   return (d1 is not None) and (d2 is not None) and (d1 != d2)
+
 def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
    iclass = XMLInstr.attrib['iclass']
    category = XMLInstr.attrib['category']
@@ -267,6 +278,11 @@ def main():
                targetOp = opIdxToName[latNode.attrib['target_op']]
                if 'cycles' in latNode.attrib:
                   latData[(startOp, targetOp)] = int(latNode.attrib['cycles'])
+                  if isAMD and latNode.attrib.get('cycles_is_upper_bound') == '1' and crossesDomains(XMLInstr, latNode):
+                     # uops.info measures the latency of moves between general-purpose and vector registers in a chain with a move in the
+                     # other direction and attributes almost all of it to this instruction; perf, Ryzen 7 7735U: 'vmovq xmm0, rax;
+                     # vmovq rax, xmm0': 6 cycles per iteration, upper bounds 5 + 5 (zenbench SET=v2g: all round trips are 4 cycles shorter)
+                     latData[(startOp, targetOp)] = max(1, latData[(startOp, targetOp)] - AMD_CROSS_DOMAIN_BOUND_CORRECTION)
                if 'cycles_same_reg' in latNode.attrib:
                   latDataSameReg[(startOp, targetOp)] = int(latNode.attrib['cycles_same_reg'])
                if 'min_cycles' in latNode.attrib:

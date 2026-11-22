@@ -404,9 +404,11 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
             continue
          instr.portData = dict(instr.portData)
          for pc, n in list(instr.portData.items()):
-            if any(p in uArchConfig.storeDataPorts for p in pc) and any(p in uArchConfig.storeLineRestrictedPorts for p in pc):
+            if all(p in uArchConfig.storeDataPorts for p in pc):
+               # also vector stores (perf, Ryzen 7 7735U: 'mov [rsi+1024], rax; movups [rsi+2048], xmm8': 2 cycles per iteration;
+               # [rsi+2048] and [rsi+2064]: 1 cycle; one more integer store to another line: 3 cycles)
                del instr.portData[pc]
-               newPc = ''.join(p for p in pc if p not in uArchConfig.storeLineRestrictedPorts)
+               newPc = ''.join(p for p in uArchConfig.storeDataPorts if p not in uArchConfig.storeLineRestrictedPorts and p not in uArchConfig.vectorStoreDataPorts)
                instr.portData[newPc] = instr.portData.get(newPc, 0) + n
 
    if uArchConfig.narrowStorePenalty:
