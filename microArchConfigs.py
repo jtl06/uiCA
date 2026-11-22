@@ -280,5 +280,5 @@ MicroArchConfigs['ADL-P'].takenBranchPort = '6'
 # perf, Core i7-12650H (zenbench SET=rmw): e.g., 'add dword ptr [rsi+64], 3' and 'add byte ptr [rsi+64], 3' run at 1 cycle per iteration, while the
 # forms with a register source and the 16-bit forms take more than 7 cycles. This agrees with the memory-to-memory latencies measured by
 # uops.info (1 vs. 6 or more cycles).
-MicroArchConfigs['ADL-P'].memoryRenaming = 'latency'
+MicroArchConfigs['ADL-P'].memoryRenaming = 'latency' # and loads into general-purpose registers, see instructions.py
 MicroArchConfigs['ADL-P'].experimental = True

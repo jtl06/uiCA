@@ -326,7 +326,11 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                instruction.memRenaming = bool(perfData.get('memRename'))
             elif uArchConfig.memoryRenaming == 'latency':
                memLat = [l for k, l in latData.items() if len(k) == 3 and k[2] == 'mem' and k[0] == k[1]]
-               instruction.memRenaming = bool(memLat) and (min(memLat) <= 1)
+               # loads into general-purpose registers are renamed as well (perf, Core i7-12650H: 'mov [rsi], rax; mov rax, [rsi]; add rax, 1'
+               # runs at 1 cycle per iteration)
+               isGPRLoad = (bool(instrInputMemOperands) and (not instrOutputMemOperands) and bool(instrOutputRegOperands)
+                            and all(getCanonicalReg(r) in GPRegs for _, r in instrOutputRegOperands))
+               instruction.memRenaming = (bool(memLat) and (min(memLat) <= 1)) or isGPRLoad
             break
 
       if instruction is None:
