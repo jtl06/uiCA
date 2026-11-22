@@ -33,6 +33,7 @@ class UopProperties:
       self.latencies = latencies # latencies[outOp] = x
       self.divCycles = divCycles
       self.isLoadUop = isLoadUop
+      self.forwardDelay = 0 # store-forwarding delay for load uops, set in computeUopProperties
       self.isStoreAddressUop = isStoreAddressUop
       self.memAddr = memAddr
       self.isStoreDataUop = isStoreDataUop
@@ -142,7 +143,7 @@ class RenamedOperand:
          sb = self.uop.storeBufferEntry
          if (sb.addressReadyCycle is None) or (sb.dataReadyCycle is None):
             return None
-         memReady = max(sb.addressReadyCycle, sb.dataReadyCycle) + self.uop.instrI.uArchConfig.storeForwardDelay # ToDo
+         memReady = max(sb.addressReadyCycle, sb.dataReadyCycle) + self.uop.prop.forwardDelay # ToDo
          self.__ready = max(self.uop.dispatched + lat, memReady)
       else:
          self.__ready = self.uop.dispatched + lat
@@ -1258,6 +1259,11 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
                uopLatencies[outOp] = max([instr.latencies[(a, outOp)] for a in instr.memAddrOperands if (a, outOp) in instr.latencies]
                                          or [uArchConfig.loadLatency])
          loadUopProps.append(UopProperties(instr, pc, inputOperands, outputOperands, uopLatencies, isLoadUop=True, memAddr=memAddr))
+         loadUopProps[-1].forwardDelay = uArchConfig.storeForwardDelay
+         if instr.outputMemOperands:
+            loadUopProps[-1].forwardDelay = uArchConfig.rmwForwardDelay
+            if (len(nonMemPcs) == 1) and (not instr.memRenaming):
+               loadUopProps[-1].forwardDelay += uArchConfig.simpleRMWForwardDelay
 
       for i, (stAPc, stDPc) in enumerate(zip(storeAddressPcs, storeDataPcs)):
          stAInputOperands = instr.memAddrOperands

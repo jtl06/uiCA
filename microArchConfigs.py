@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -64,6 +64,8 @@ class MicroArchConfig:
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
       self.loadLineSlots = loadLineSlots
+      self.rmwForwardDelayOverride = rmwForwardDelay # store-forwarding delay for loads of read-modify-write instructions (None: storeForwardDelay)
+      self.simpleRMWForwardDelay = simpleRMWForwardDelay # additional store-forwarding delay for loads of read-modify-write instructions whose operation is a single uop
       self.storeForwardDelay = storeForwardDelay # delay between the address and data of a store being ready and a load that reads it
       # store-data ports that a store may only use if another store of the loop writes to the same cache line (see instructions.py)
       self.storeLineRestrictedPorts = storeLineRestrictedPorts
@@ -73,6 +75,10 @@ class MicroArchConfig:
       self.opCacheEntryOps = opCacheEntryOps
       self.dataFrom = dataFrom # use the instruction data of this microarchitecture (convertXML.py copies it)
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
+
+   @property
+   def rmwForwardDelay(self):
+      return self.storeForwardDelay if (self.rmwForwardDelayOverride is None) else self.rmwForwardDelayOverride
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
 
@@ -250,6 +256,13 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    isAMD = True,
    experimental = True,
    memoryRenaming = 'data',
+   # perf, Ryzen 7 7735U: 8- and 16-bit read-modify-write instructions (not memory-renamed) form chains of about uops.info's latency
+   # ('add word ptr [rsi+64], 3': 6.9 cycles per iteration, 'shl word ptr [rsi+64], 3': 6.3), i.e., one cycle less than with the
+   # default forwarding delay
+   rmwForwardDelay = 3,
+   # perf, Ryzen 7 7735U: a store and a load-op instruction that reads it ('mov [rsi+64], rax; add rax, [rsi+64]'; load-op instructions
+   # are not memory-renamed) form a chain of 8.24 cycles per iteration
+   storeForwardDelay = 6,
    # perf, Ryzen 7 7735U: two stores per cycle only if they write to the same cache line ('mov [rsi], rax; mov [rsi+8], rax': 1 cycle per
    # iteration; [rsi] and [rsi+64]: 2 cycles; four stores to different lines: 4 cycles)
    storeLineRestrictedPorts = 't',
@@ -306,6 +319,10 @@ MicroArchConfigs['ADL-P'].loadLineSlots = 2
 # perf, Core i7-12650H (zenbench SET=rmw): e.g., 'add dword ptr [rsi+64], 3' and 'add byte ptr [rsi+64], 3' run at 1 cycle per iteration, while the
 # forms with a register source and the 16-bit forms take more than 7 cycles. This agrees with the memory-to-memory latencies measured by
 # uops.info (1 vs. 6 or more cycles).
+# perf, Core i7-12650H: a read-modify-write instruction that is not memory-renamed and whose operation is a single uop (e.g.,
+# 'add word ptr [rsi+64], 3' or 'add dword ptr [rsi+64], ecx') forms a chain of 7.3 cycles per iteration, one more than uops.info's
+# latency; for instructions with more uops (shift by cl, adc, rcl, shld) uops.info's latency fits
+MicroArchConfigs['ADL-P'].simpleRMWForwardDelay = 1
 MicroArchConfigs['ADL-P'].memoryRenaming = 'latency' # and loads into general-purpose registers, see instructions.py
 MicroArchConfigs['ADL-P'].experimental = True
 
