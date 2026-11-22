@@ -255,6 +255,19 @@ def main():
                   if TPs:
                      perfData['TP'+iSuffix] = min(TPs)
 
+               if (mSuffix == '') and perfData.get('uopsMS') and (measurementNode.attrib.get('ports') is not None):
+                  # Microcoded instructions whose measured throughput is much lower than what the ports and the issue width allow (e.g.,
+                  # AESKEYGENASSIST: 13 cycles on ADL-P, but ~4 cycles from its ports): stored separately, used only by the experimental
+                  # configurations (see instructions.py), so that the stock models are unchanged
+                  TPs = [float(measurementNode.attrib[a]) for a in ['TP_unrolled', 'TP_loop'] if a in measurementNode.attrib]
+                  pcs = [(p.replace('p', ''), int(n)) for np in measurementNode.attrib['ports'].split('+') for n, p in [np.split('*')]]
+                  bound = perfData.get('uops', 0) / 5.0
+                  for mask in range(1, 1 << len(pcs)):
+                     union = set(c for i, (pc, _) in enumerate(pcs) if mask & (1 << i) for c in pc)
+                     bound = max(bound, sum(n for pc, n in pcs if set(pc) <= union) / float(len(union)))
+                  if TPs and (min(TPs) >= 1.0) and (min(TPs) > 1.3 * bound) and (XMLInstr.attrib['category'] not in ['COND_BR', 'UNCOND_BR', 'CALL', 'RET']):
+                     perfData['TP_MS'] = round(min(TPs), 2)
+
                ports = measurementNode.attrib.get('ports'+mSuffix)
                if ports is not None: # ToDo: AMD
                   if (archNode.attrib['name'] not in ['ICL', 'TGL', 'RKL', 'ADL-P']) and (XMLInstr.attrib['category'] == 'COND_BR') and (ports == '1*p06'):

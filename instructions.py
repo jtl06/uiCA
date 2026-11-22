@@ -132,6 +132,8 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
             nAvailableSimpleDecoders = perfData.get('sDec', uArchConfig.nDecoders)
             hasLockPrefix = ('locked' in instrData)
             TP = perfData.get('TP')
+            if uArchConfig.experimental and perfData.get('TP_MS'):
+               TP = max(TP or 0, perfData['TP_MS'])
             if sameReg:
                uops = perfData.get('uops_SR', uops)
                retireSlots = perfData.get('retSlots_SR', retireSlots)
