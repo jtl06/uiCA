@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -69,6 +69,8 @@ class MicroArchConfig:
       self.storeLineRestrictedPorts = storeLineRestrictedPorts
       # if > 0: a loop with an 8- or 16-bit store and stores to L >= 2 different cache lines takes at least L + narrowStorePenalty cycles per iteration
       self.narrowStorePenalty = narrowStorePenalty
+      # AMD (simple front end): if > 0, the op cache delivers one entry of up to this many macro-ops per cycle; an entry ends at the end of the loop
+      self.opCacheEntryOps = opCacheEntryOps
       self.dataFrom = dataFrom # use the instruction data of this microarchitecture (convertXML.py copies it)
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
@@ -254,6 +256,9 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # perf, Ryzen 7 7735U: 'mov byte ptr [rsi], al; mov qword ptr [rsi+128], rbx': 5 cycles per iteration (32-bit instead of 8-bit store: 2; both stores in
    # the same line: 1); with stores to 3 or 4 lines: 6 or 7 cycles, independently of the number of 8- or 16-bit stores
    narrowStorePenalty = 3,
+   # perf, Ryzen 7 7735U: 8 nops + dec/jnz (9 macro-ops): 2 cycles per iteration (dispatch width alone: 1.5); 10 nops: 2; 12: 2.17; 14: 2.5.
+   # An entry does not span a 64-byte boundary, and a 64-bit immediate uses two slots (4 x 'mov r64, imm64' + dec/jnz: 2 cycles; 7 (70 bytes): 3)
+   opCacheEntryOps = 8,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (zenbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py

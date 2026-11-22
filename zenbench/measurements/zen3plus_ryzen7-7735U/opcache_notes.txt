@@ -1,0 +1,5 @@
+Measured with perf (cycles per iteration), Ryzen 7 7735U, core 2 with its SMT sibling idle, 50M iterations; loops start at a 64-byte boundary.
+nop_4 1.00  nop_6 1.17  nop_8 2.00  nop_10 2.00  nop_12 2.17  nop_14 2.50   (k nops + dec/jnz)
+imm8_4 1.25  imm8_5 1.50  imm8_6 2.00  imm8_7 2.00     (k independent 'add r64, 1')
+imm32_4 1.25 imm32_5 1.50 imm32_6 2.00 imm32_7 2.00    (k independent 'add r64, 0x12345')
+imm64_4 2.00 imm64_5 2.00 imm64_6 3.00 imm64_7 3.00    (k independent 'mov r64, 0x123456789')
