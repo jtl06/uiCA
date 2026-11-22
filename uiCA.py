@@ -320,7 +320,9 @@ class Renamer:
                      prevRenOp = self.renameDict[key].renamedOp
                      if (not uop.eliminated) or (prevRenOp != self.curInstrRndRenameDict[key].renamedOp):
                         if (key in GPRegs) and (prevRenOp in self.multiUseGPRDict):
-                           self.multiUseGPRDict[prevRenOp].remove(key)
+                           # discard: a register whose value was computed by the renamer (MicroArchConfig.renameImmediateFolding) shares the
+                           # renamed operand of its input without being an alias created by move elimination
+                           self.multiUseGPRDict[prevRenOp].discard(key)
                         elif (type(key) == str) and ('MM' in key) and (prevRenOp in self.multiUseSIMDDict):
                            if self.multiUseSIMDDict[prevRenOp]:
                               self.multiUseSIMDDict[prevRenOp].remove(key)
