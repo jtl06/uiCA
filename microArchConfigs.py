@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts=''):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -74,6 +74,8 @@ class MicroArchConfig:
       self.narrowStorePenalty = narrowStorePenalty
       # AMD (simple front end): if > 0, the op cache delivers one entry of up to this many macro-ops per cycle; an entry ends at the end of the loop
       self.opCacheEntryOps = opCacheEntryOps
+      self.opCacheMaxFields = opCacheMaxFields
+      self.opCacheEntryFields = opCacheEntryFields # if > 0: maximum number of immediate and displacement fields in an op cache entry
       self.dataFrom = dataFrom # use the instruction data of this microarchitecture (convertXML.py copies it)
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
@@ -274,6 +276,12 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # perf, Ryzen 7 7735U: 8 nops + dec/jnz (9 macro-ops): 2 cycles per iteration (dispatch width alone: 1.5); 10 nops: 2; 12: 2.17; 14: 2.5.
    # An entry does not span a 64-byte boundary, and a 64-bit immediate uses two slots (4 x 'mov r64, imm64' + dec/jnz: 2 cycles; 7 (70 bytes): 3)
    opCacheEntryOps = 8,
+   # perf, Ryzen 7 7735U (zenbench SET=opc): immediate and displacement fields (8 or 32 bits, integer or vector instructions) also limit an
+   # entry: with 8 macro-ops at most 3 (two loads with displacements and one immediate: 1.34 cycles per iteration; two immediates: 2.00), each
+   # unused op slot holds two more, and at most 5 in total (7 ops and 5 fields: 1.28; 6 ops and 6 fields: 2.00); the size of the fields and of
+   # the instructions does not matter
+   opCacheEntryFields = 3,
+   opCacheMaxFields = 5,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (zenbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py

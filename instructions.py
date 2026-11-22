@@ -6,6 +6,7 @@ from microArchConfigs import MicroArchConfig
 from x64_lib import *
 
 class Instr:
+   opCacheFields = 0 # number of immediate and displacement fields (see MicroArchConfig.opCacheEntryFields)
    def __init__(self, asm, opcode, posNominalOpcode, instrStr, portData, uops, retireSlots, uopsMITE, uopsMS, divCycles, inputRegOperands, inputFlagOperands,
                 inputMemOperands, outputRegOperands, outputFlagOperands, outputMemOperands, memAddrOperands, agenOperands, latencies, TP, immediate,
                 lcpStall, implicitRSPChange, mayBeEliminated, complexDecoder, nAvailableSimpleDecoders, hasLockPrefix, isBranchInstr, isSerializingInstr,
@@ -379,6 +380,9 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
             if (prevAddr // 32) != (nextAddr // 32):
                prevInstr.cannotBeInDSBDueToJCCErratum = True
 
+      # immediate and displacement fields (zero displacements are not encoded, except with RBP/R13 as base)
+      instruction.opCacheFields = (1 if immediateWidth else 0) + sum(1 for m in instrD['memOperands'].values()
+                                                                   if (m.get('disp') or 0) != 0 or m.get('base') in ('RBP', 'R13'))
       instructions.append(instruction)
 
    if uArchConfig.loadLineSlots:

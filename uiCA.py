@@ -452,6 +452,7 @@ class FrontEnd:
          # one op cache entry per cycle (see MicroArchConfig.opCacheEntryOps); an instruction's macro-ops are not split between entries
          if len(self.IDQ) + self.uArchConfig.opCacheEntryOps <= self.uArchConfig.IDQWidth:
             nOps = 0
+            nFields = 0
             entryWindow = None
             while True:
                if not self.opCacheRound:
@@ -461,7 +462,9 @@ class FrontEnd:
                # crosses a boundary belongs to the next block)
                slots = len(instrI.uops) + (1 if 'I64' in instrI.instr.instrStr else 0)
                window = (instrI.address + len(instrI.instr.opcode) // 2 - 1) // 64
-               if (entryWindow is not None) and ((nOps + slots > self.uArchConfig.opCacheEntryOps) or (window != entryWindow)):
+               fields = instrI.instr.opCacheFields
+               if (entryWindow is not None) and ((nOps + slots > self.uArchConfig.opCacheEntryOps) or (window != entryWindow)
+                                                 or (self.uArchConfig.opCacheEntryFields and (nFields + fields > self.opCacheFieldCapacity(nOps + slots)))):
                   break
                if entryWindow is None:
                   entryWindow = window
@@ -472,6 +475,7 @@ class FrontEnd:
                   self.IDQ.append(lamUop)
                   lamUop.addedToIDQ = clock
                nOps += slots
+               nFields += fields
                if not self.opCacheRound:
                   break # the entry ends at the end of the loop
       elif self.uopSource is None:
@@ -530,6 +534,11 @@ class FrontEnd:
             self.addStackSyncUop(clock, lamUop.getUnfusedUops()[0])
             self.IDQ.append(lamUop)
             lamUop.addedToIDQ = clock
+
+   def opCacheFieldCapacity(self, nOps):
+      # see MicroArchConfig.opCacheEntryFields: fields in an entry with nOps macro-ops; each unused op slot holds two more fields
+      c = self.uArchConfig
+      return min(c.opCacheMaxFields, c.opCacheEntryFields + 2 * (c.opCacheEntryOps - nOps))
 
    def newRound(self):
       instrIs = []
