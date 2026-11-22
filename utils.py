@@ -1,3 +1,4 @@
+import re
 from collections import namedtuple
 from itertools import count
 from typing import Dict, Optional
@@ -9,8 +10,12 @@ from x64_lib import *
 
 AbstractValue = namedtuple('AbstractValue', ['base', 'offset'])
 class AbstractValueGenerator:
-   def __init__(self, initPolicy):
+   def __init__(self, initPolicy, loadValueNumbering=False):
       self.initPolicy = initPolicy
+      # loadValueNumbering: a MOV load from an abstract address gets the abstract value that was last stored there with a MOV, or that the
+      # last load from there got (e.g., 'mov rdi, [r12]' in every iteration of a loop yields the same pointer; see MicroArchConfig)
+      self.loadValueNumbering = loadValueNumbering
+      self.memValueDict = {} # abstract address -> (width, abstract value)
       self.abstractValueBaseGenerator = count(0)
       self.initValue = self.__generateFreshAbstractValue()
       self.abstractValueDict = {}
@@ -30,6 +35,20 @@ class AbstractValueGenerator:
             self.abstractValueDict[key] = self.initValue
       return self.abstractValueDict[key]
 
+   def getAddressKey(self, memAddr):
+      return (self.getAbstractValueForReg(memAddr.get('base')), self.getAbstractValueForReg(memAddr.get('index')), memAddr.get('scale'),
+              memAddr.get('disp'))
+
+   def recordStore(self, key, instr: Instr):
+      # called for each store (in program order); key: as returned by getAddressKey
+      if not self.loadValueNumbering:
+         return
+      m = re.match(r'MOV \(M(32|64), R(32|64)\)', instr.instrStr)
+      if m and m.group(1) == m.group(2) and instr.inputRegOperands:
+         self.memValueDict[key] = (int(m.group(1)), self.getAbstractValueForReg(instr.inputRegOperands[0].reg))
+      else:
+         self.memValueDict.pop(key, None)
+
    def setAbstractValueForCurInstr(self, key, instr: Instr):
       self.curInstrRndAbstractValueDict[key] = self.__computeAbstractValue(instr)
 
@@ -41,6 +60,14 @@ class AbstractValueGenerator:
       return AbstractValue(next(self.abstractValueBaseGenerator), 0)
 
    def __computeAbstractValue(self, instr: Instr):
+      if self.loadValueNumbering and instr.inputMemOperands and (not instr.outputMemOperands):
+         m = re.match(r'MOV \(R(32|64), M(32|64)\)', instr.instrStr)
+         if m and m.group(1) == m.group(2):
+            key = self.getAddressKey(instr.inputMemOperands[0].memAddr)
+            width = int(m.group(1))
+            if self.memValueDict.get(key, (None,))[0] != width:
+               self.memValueDict[key] = (width, self.__generateFreshAbstractValue())
+            return self.memValueDict[key][1]
       if instr.inputRegOperands:
          absVal = self.getAbstractValueForReg(instr.inputRegOperands[0].reg)
          if 'MOV' in instr.instrStr and not 'CMOV' in instr.instrStr:

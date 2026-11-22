@@ -9,7 +9,9 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
+                memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
+                loadValueNumbering=False):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -60,6 +62,18 @@ class MicroArchConfig:
       # directly from the register that the store read. None: not supported; 'data': the instructions are marked in the instruction data
       # (convertXML.py); 'latency': read-modify-write instructions for which uops.info measured a memory-to-memory latency of at most 1 cycle
       self.memoryRenaming = memoryRenaming
+      # restrictions of memory renaming for loads into general-purpose registers (None/empty: none): the memory widths (in bits) of loads and
+      # stores that can be renamed (a load is renamed only if it is not wider than the store), the instructions (iclasses) whose loads are
+      # never renamed, and whether a value computed by the renamer (renameImmediateFolding) can be renamed only if it is stored with the
+      # full width of the operation
+      self.memRenamingWidths = memRenamingWidths
+      self.memRenamingExcluded = memRenamingExcluded
+      self.memRenamingFoldedCheck = memRenamingFoldedCheck
+      # additional store-forwarding delay if a load reads more bytes than the store it depends on (e.g., 'mov [rsp+8], eax; mov rax, [rsp+8]')
+      self.storeForwardFailDelay = storeForwardFailDelay
+      # a MOV load from an (abstract) address that was not written since the last MOV load or store there yields the same value (e.g., the
+      # pointer in 'mov rdi, [r12]; add qword ptr [rdi], 1' is the same in every iteration, so that the add forms a chain through memory)
+      self.loadValueNumbering = loadValueNumbering
       # if set: the number of different cache lines that loads can access per cycle; loads to the same line at different offsets share an access.
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
@@ -259,6 +273,13 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    isAMD = True,
    experimental = True,
    memoryRenaming = 'data',
+   # perf, Ryzen 7 7735U (store-reload chains such as 'mov eax, [rsp+8]; add eax, 1; mov [rsp+8], eax', 1 cycle per iteration): loads are renamed
+   # only for 32- and 64-bit MOV and POP; chains with MOVZX, MOVSX or MOVSXD loads, or 8- or 16-bit loads, take 7.8-8.9 cycles
+   memRenamingWidths = (32, 64),
+   memRenamingExcluded = ('MOVZX', 'MOVSX', 'MOVSXD'),
+   # perf, Ryzen 7 7735U: 'mov rax, [rsp+8]; mov [rsp+8], eax' (a load that is wider than the store) takes 18 cycles per iteration
+   storeForwardFailDelay = 11,
+   loadValueNumbering = True,
    # perf, Ryzen 7 7735U: 8- and 16-bit read-modify-write instructions (not memory-renamed) form chains of about uops.info's latency
    # ('add word ptr [rsi+64], 3': 6.9 cycles per iteration, 'shl word ptr [rsi+64], 3': 6.3), i.e., one cycle less than with the
    # default forwarding delay
@@ -334,6 +355,16 @@ MicroArchConfigs['ADL-P'].loadLineSlots = 2
 # latency; for instructions with more uops (shift by cl, adc, rcl, shld) uops.info's latency fits
 MicroArchConfigs['ADL-P'].simpleRMWForwardDelay = 1
 MicroArchConfigs['ADL-P'].memoryRenaming = 'latency' # and loads into general-purpose registers, see instructions.py
+# perf, Core i7-12650H (store-reload chains such as 'mov eax, [rsp+8]; add eax, 1; mov [rsp+8], eax', 1 cycle per iteration; found with real-code
+# blocks from BHive, zenbench/real): not renamed (6.7-7.8 cycles) are 16-bit loads, MOVSXD loads, and values of 64-bit operations that the renamer
+# computes (add/sub with immediate, lea) if they are stored with 32 or 8 bits ('mov eax, [rsp+8]; add rax, 1; mov [rsp+8], eax'); 8-bit loads
+# ('movzx eax, byte ptr [rsp+8]; add eax, 1; mov [rsp+8], al') are renamed
+MicroArchConfigs['ADL-P'].memRenamingWidths = (8, 32, 64)
+MicroArchConfigs['ADL-P'].memRenamingExcluded = ('MOVSX', 'MOVSXD')
+MicroArchConfigs['ADL-P'].memRenamingFoldedCheck = True
+# perf, Core i7-12650H: 'mov rax, [rsp+8]; mov [rsp+8], eax' (a load that is wider than the store) takes 20 cycles per iteration
+MicroArchConfigs['ADL-P'].storeForwardFailDelay = 15
+MicroArchConfigs['ADL-P'].loadValueNumbering = True
 MicroArchConfigs['ADL-P'].experimental = True
 
 # Experimental: Ice Lake server (Sunny Cove). uops.info only has measurements for client Ice Lake, on which move elimination for general-purpose
@@ -354,3 +385,6 @@ MicroArchConfigs['ICX'].experimental = True
 # default (fits the short loops and most random ones); for other loads the default fits the random loops better (fresh set: 81.6% within 10%
 # vs. 80.9% with 5).
 MicroArchConfigs['ICX'].rmwForwardDelayOverride = 5
+# perf, Xeon Gold 6314U: 'mov rax, [rsp+8]; mov [rsp+8], eax' (a load that is wider than the store) takes 19 cycles per iteration
+MicroArchConfigs['ICX'].storeForwardFailDelay = 14
+MicroArchConfigs['ICX'].loadValueNumbering = True

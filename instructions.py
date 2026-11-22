@@ -5,6 +5,12 @@ import xed
 from microArchConfigs import MicroArchConfig
 from x64_lib import *
 
+def memWidth(instrStr):
+   # width (in bits) of the memory operand of an instruction, from its uops.info string (e.g., 'MOVZX (R32, M8)'); None if it has none
+   if instrStr.startswith(('PUSH', 'POP')): return 64
+   m = re.search(r'\bM(\d+)\b', instrStr)
+   return int(m.group(1)) if m else None
+
 class Instr:
    opCacheFields = 0 # number of immediate and displacement fields (see MicroArchConfig.opCacheEntryFields)
    def __init__(self, asm, opcode, posNominalOpcode, instrStr, portData, uops, retireSlots, uopsMITE, uopsMS, divCycles, inputRegOperands, inputFlagOperands,
@@ -246,6 +252,12 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                   for outOp in outOps:
                      latencies[(regOp, outOp)] = latData.get((inpN, outN), 1)
 
+            # experimental configurations: if uops.info measured a latency of 0 from the flags to all register outputs (shifts and rotates by CL:
+            # the flags are only read for the case CL = 0, in which the register does not change either), the flags are not an input
+            # (perf, Ryzen 7 7735U: 'shl rdx, cl; or rbx, rdx' runs at 1 cycle per iteration, while a flags dependency would give 2 cycles)
+            if (instrFlagOperand is not None) and uArchConfig.experimental and instrOutputRegOperands and all(
+                  latData.get((instrFlagOperand, outN), 1) == 0 for outN, _ in instrOutputRegOperands):
+               instrFlagOperand = None
             if instrFlagOperand is not None:
                flagsR = instrData.get('flagsR', '')
                if 'C' in flagsR:
@@ -336,6 +348,10 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                isGPRLoad = (bool(instrInputMemOperands) and (not instrOutputMemOperands) and bool(instrOutputRegOperands)
                             and all(getCanonicalReg(r) in GPRegs for _, r in instrOutputRegOperands))
                instruction.memRenaming = (bool(memLat) and (min(memLat) <= 1)) or isGPRLoad
+            if instruction.memRenaming and instrInputMemOperands and (not instrOutputMemOperands):
+               if ((uArchConfig.memRenamingWidths and (memWidth(instruction.instrStr) not in uArchConfig.memRenamingWidths))
+                     or (instrD['iform'].split('_')[0] in uArchConfig.memRenamingExcluded)):
+                  instruction.memRenaming = False
             break
 
       if instruction is None:

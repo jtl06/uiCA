@@ -34,6 +34,7 @@ class UopProperties:
       self.divCycles = divCycles
       self.isLoadUop = isLoadUop
       self.forwardDelay = 0 # store-forwarding delay for load uops, set in computeUopProperties
+      self.forwardFailDelay = 0 # additional delay if the load is wider than the store (MicroArchConfig.storeForwardFailDelay)
       self.isStoreAddressUop = isStoreAddressUop
       self.memAddr = memAddr
       self.isStoreDataUop = isStoreDataUop
@@ -57,6 +58,8 @@ class Uop:
       self.renamedInputOperands: List[RenamedOperand] = []
       self.renamedOutputOperands: List[RenamedOperand] = []
       self.storeBufferEntry = None
+      self.memRenamingBlocked = False # see MicroArchConfig.memRenamingWidths
+      self.forwardFails = False # the load is wider than the store it reads from
       self.latReducedDueToFastPtrChasing = False
       self.readyForDispatch = None
       self.dispatched = None
@@ -112,6 +115,8 @@ class StoreBufferEntry:
       self.uops = [] # uops that write to this entry
       self.addressReadyCycle = None
       self.dataReadyCycle = None
+      self.width = None # width of the store (bits)
+      self.renamable = True # see MicroArchConfig.memRenamingWidths
 
 class RenamedOperand:
    def __init__(self, nonRenamedOperand=None, uop=None, ready=None):
@@ -123,7 +128,7 @@ class RenamedOperand:
       if self.__ready is not None:
          return self.__ready
 
-      if self.uop.prop.isLoadUop and (self.uop.storeBufferEntry is not None) and self.uop.prop.instr.memRenaming:
+      if self.uop.prop.isLoadUop and (self.uop.storeBufferEntry is not None) and self.uop.prop.instr.memRenaming and (not self.uop.memRenamingBlocked):
          # Memory renaming (see MicroArchConfig.memoryRenaming): a load from an address that was just written with the same addressing
          # expression gets its value directly from the register that was stored.
          readyCycles = [op.getReadyCycle() for u in self.uop.storeBufferEntry.uops if u.prop.isStoreDataUop for op in u.renamedInputOperands]
@@ -144,6 +149,8 @@ class RenamedOperand:
          if (sb.addressReadyCycle is None) or (sb.dataReadyCycle is None):
             return None
          memReady = max(sb.addressReadyCycle, sb.dataReadyCycle) + self.uop.prop.forwardDelay # ToDo
+         if self.uop.forwardFails:
+            memReady += self.uop.prop.forwardFailDelay
          self.__ready = max(self.uop.dispatched + lat, memReady)
       else:
          self.__ready = self.uop.dispatched + lat
@@ -157,7 +164,7 @@ class Renamer:
       self.IDQ = IDQ
       self.reorderBuffer = reorderBuffer
       self.uArchConfig = uArchConfig
-      self.absValGen = AbstractValueGenerator(initPolicy)
+      self.absValGen = AbstractValueGenerator(initPolicy, uArchConfig.loadValueNumbering)
 
       self.renameDict = {}
 
@@ -177,6 +184,8 @@ class Renamer:
 
       self.curStoreBufferEntry = None
       self.storeBufferEntryDict = {}
+      self.foldedWidth = {} # register -> width of the operation if its value was computed by the renamer (renameImmediateFolding)
+      self.curInstrFoldedWidth = {}
 
       self.lastRegMergeIssued = None # last uop for which register merge uops were issued
 
@@ -260,6 +269,8 @@ class Renamer:
 
                entry = self.renameDict.setdefault(canonicalInpReg, RenameDictEntry(RenamedOperand(ready=-1), False))
                self.curInstrRndRenameDict[canonicalOutReg] = RenameDictEntry(entry.renamedOp, is32BitMove)
+               if canonicalInpReg in self.foldedWidth:
+                  self.curInstrFoldedWidth[canonicalOutReg] = self.foldedWidth[canonicalInpReg]
                if not entry.renamedOp in curMultiUseDict:
                   curMultiUseDict[entry.renamedOp] = set()
                curMultiUseDict[entry.renamedOp].update([canonicalInpReg, canonicalOutReg])
@@ -272,6 +283,14 @@ class Renamer:
                      key = self.getStoreBufferKey(uop.prop.memAddr)
                      self.curStoreBufferEntry = StoreBufferEntry(key)
                      self.storeBufferEntryDict[key] = self.curStoreBufferEntry
+                     sbe = self.curStoreBufferEntry
+                     sbe.width = memWidth(uop.prop.instr.instrStr)
+                     self.absValGen.recordStore(key, uop.prop.instr)
+                     if self.uArchConfig.memRenamingWidths and (sbe.width not in self.uArchConfig.memRenamingWidths):
+                        sbe.renamable = False
+                     if self.uArchConfig.memRenamingFoldedCheck and sbe.width:
+                        if any(self.foldedWidth.get(getCanonicalReg(op.reg), 0) > sbe.width for op in uop.prop.instr.inputRegOperands):
+                           sbe.renamable = False
                   if uop.prop.isStoreAddressUop or uop.prop.isStoreDataUop:
                      uop.storeBufferEntry = self.curStoreBufferEntry
                      self.curStoreBufferEntry.uops.append(uop)
@@ -286,6 +305,11 @@ class Renamer:
                      uop.latReducedDueToFastPtrChasing = latReducedDueToFastPtrChasing(self.uArchConfig, uop.prop.memAddr, baseInstr, indexInstr,
                                                                                        (baseEntry and baseEntry.renamedByElim32BitMove))
                      uop.storeBufferEntry = self.storeBufferEntryDict.get(key, None)
+                     sbe = uop.storeBufferEntry
+                     if (sbe is not None) and sbe.width and (memWidth(uop.prop.instr.instrStr) or 0) > sbe.width:
+                        uop.forwardFails = True
+                     if (sbe is not None) and self.uArchConfig.memRenamingWidths:
+                        uop.memRenamingBlocked = (not sbe.renamable) or ((memWidth(uop.prop.instr.instrStr) or 0) > (sbe.width or 0))
 
                   for inpOp in uop.prop.inputOperands:
                      if isinstance(inpOp, PseudoOperand):
@@ -312,6 +336,9 @@ class Renamer:
                         # e.g., add rax, 1 on Golden Cove: the result is available as soon as the input is
                         entry = self.renameDict.setdefault(foldedInputReg, RenameDictEntry(RenamedOperand(ready=-1), False))
                         self.curInstrRndRenameDict[getCanonicalReg(op.reg)] = RenameDictEntry(entry.renamedOp, False)
+                        self.curInstrFoldedWidth[getCanonicalReg(op.reg)] = getRegSize(op.reg)
+                        # the register has a new value (e.g., add r9, 1 changes the address of [rax+r9*4])
+                        self.absValGen.setAbstractValueForCurInstr(getCanonicalReg(op.reg), uop.prop.instr)
                         continue
                      self.curInstrRndRenameDict[getCanonicalReg(op.reg)] = RenameDictEntry(RenamedOperand(uop=uop, ready=-1), False)
 
@@ -328,6 +355,12 @@ class Renamer:
                            if self.multiUseSIMDDict[prevRenOp]:
                               self.multiUseSIMDDict[prevRenOp].remove(key)
 
+               for key in self.curInstrRndRenameDict:
+                  if key in self.curInstrFoldedWidth:
+                     self.foldedWidth[key] = self.curInstrFoldedWidth[key]
+                  else:
+                     self.foldedWidth.pop(key, None)
+               self.curInstrFoldedWidth.clear()
                self.renameDict.update(self.curInstrRndRenameDict)
                self.absValGen.finishCurInstr()
                self.curInstrRndRenameDict.clear()
@@ -1269,6 +1302,7 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
                                          or [uArchConfig.loadLatency])
          loadUopProps.append(UopProperties(instr, pc, inputOperands, outputOperands, uopLatencies, isLoadUop=True, memAddr=memAddr))
          loadUopProps[-1].forwardDelay = uArchConfig.storeForwardDelay
+         loadUopProps[-1].forwardFailDelay = uArchConfig.storeForwardFailDelay
          if instr.outputMemOperands:
             loadUopProps[-1].forwardDelay = uArchConfig.rmwForwardDelay
             if (len(nonMemPcs) == 1) and (not instr.memRenaming):

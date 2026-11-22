@@ -1,0 +1,39 @@
+== ZEN3: 1500 loops generated, 1472 compared; excluded: {'unstable measurement': 19, 'no prediction from llvm-mca znver3': 9}
+   uiCA ZEN3             1472 loops: mean   5.5%, median   0.1%, within 10%:  80.8%, too fast/too slow by >10%: 14.2% /  5.0%
+   llvm-mca znver3       1472 loops: mean  18.6%, median   8.1%, within 10%:  54.0%, too fast/too slow by >10%: 31.1% / 14.9%
+   by tag (uiCA ZEN3 | llvm-mca znver3):
+      plain (no rmw, not value-dependent)  1303 loops: mean   5.3% |  17.2%   within 10%:  81.3% |  55.7%
+      int                                   222 loops: mean   9.2% |  28.7%   within 10%:  71.2% |  35.6%
+      sse                                   538 loops: mean   5.0% |  19.1%   within 10%:  82.9% |  55.6%
+      avx                                   712 loops: mean   4.6% |  15.1%   within 10%:  82.2% |  58.6%
+      load                                 1237 loops: mean   5.8% |  19.4%   within 10%:  79.5% |  52.8%
+      store                                 470 loops: mean   4.8% |  19.4%   within 10%:  83.0% |  54.0%
+      rmw                                   115 loops: mean   8.0% |  38.6%   within 10%:  73.0% |  21.7%
+      value-dependent                        56 loops: mean   4.0% |  11.1%   within 10%:  83.9% |  80.4%
+== ADL-P: 1500 loops generated, 1359 compared; excluded: {'unstable measurement': 123, 'no prediction from llvm-mca alderlake': 18}
+   uiCA ADL-P            1359 loops: mean   3.6%, median   0.1%, within 10%:  87.6%, too fast/too slow by >10%:  8.6% /  3.8%
+   stock uiCA RKL        1359 loops: mean  17.5%, median  12.6%, within 10%:  44.4%, too fast/too slow by >10%:  6.5% / 49.0%
+   llvm-mca alderlake    1359 loops: mean  35.5%, median  25.1%, within 10%:  32.4%, too fast/too slow by >10%: 10.6% / 57.0%
+   by tag (uiCA ADL-P | llvm-mca alderlake):
+      plain (no rmw, not value-dependent)  1202 loops: mean   3.3% |  34.4%   within 10%:  88.0% |  34.0%
+      int                                   221 loops: mean   4.1% |  53.1%   within 10%:  86.4% |  24.9%
+      sse                                   507 loops: mean   3.2% |  34.0%   within 10%:  90.1% |  30.6%
+      avx                                   631 loops: mean   3.7% |  30.6%   within 10%:  85.9% |  36.5%
+      load                                 1146 loops: mean   3.5% |  36.4%   within 10%:  87.6% |  31.3%
+      store                                 441 loops: mean   3.1% |  33.0%   within 10%:  90.0% |  34.0%
+      rmw                                   107 loops: mean   7.1% |  50.7%   within 10%:  81.3% |  12.1%
+      value-dependent                        52 loops: mean   2.8% |  30.9%   within 10%:  86.5% |  34.6%
+== ICL: 1500 loops generated, 1401 compared; excluded: {'unstable measurement': 91, 'no prediction from llvm-mca icelake-server': 8}
+   uiCA ICX              1401 loops: mean   4.2%, median   0.7%, within 10%:  83.4%, too fast/too slow by >10%:  9.8% /  6.8%
+   uiCA ICL              1401 loops: mean   6.0%, median   1.1%, within 10%:  80.3%, too fast/too slow by >10%: 11.1% /  8.6%
+   stock uiCA ICL        1401 loops: mean   6.4%, median   1.2%, within 10%:  79.2%, too fast/too slow by >10%: 12.3% /  8.4%
+   llvm-mca icelake-server  1401 loops: mean  23.2%, median   8.4%, within 10%:  54.5%, too fast/too slow by >10%: 20.1% / 25.4%
+   by tag (uiCA ICX | llvm-mca icelake-server):
+      plain (no rmw, not value-dependent)  1248 loops: mean   3.6% |  21.9%   within 10%:  87.0% |  57.9%
+      int                                   208 loops: mean   5.4% |  34.4%   within 10%:  75.0% |  37.0%
+      sse                                   509 loops: mean   4.4% |  26.0%   within 10%:  81.5% |  53.2%
+      avx                                   684 loops: mean   3.6% |  17.7%   within 10%:  87.4% |  60.7%
+      load                                 1173 loops: mean   4.2% |  24.2%   within 10%:  83.5% |  54.6%
+      store                                 437 loops: mean   3.6% |  22.1%   within 10%:  86.3% |  56.5%
+      rmw                                    98 loops: mean  12.3% |  45.3%   within 10%:  35.7% |   4.1%
+      value-dependent                        58 loops: mean   3.4% |  13.9%   within 10%:  86.2% |  65.5%
