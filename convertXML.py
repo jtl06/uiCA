@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shutil
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 
@@ -300,6 +301,13 @@ def main():
          f.write('instrData = ' + repr(instrDataForArch[arch]) + '\n')
          f.write('perfData = ' + repr(perfDataForArch[arch]) + '\n')
          f.write('attrData = ' + repr(attrDataForArch[arch]) + '\n')
+
+   for name, cfg in MicroArchConfigs.items():
+      if cfg.dataFrom and (cfg.dataFrom in instrDataForArch):
+         # e.g., ICX uses the data of RKL
+         shutil.copyfile(os.path.join(path, cfg.dataFrom + '_data.py'), os.path.join(path, name + '_data.py'))
+         instrDataForArch[name] = instrDataForArch[cfg.dataFrom]
+         perfDataForArch[name] = perfDataForArch[cfg.dataFrom]
 
    allPorts = {}
    ALUPorts = {}

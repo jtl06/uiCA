@@ -142,7 +142,7 @@ class RenamedOperand:
          sb = self.uop.storeBufferEntry
          if (sb.addressReadyCycle is None) or (sb.dataReadyCycle is None):
             return None
-         memReady = max(sb.addressReadyCycle, sb.dataReadyCycle) + 4 # ToDo
+         memReady = max(sb.addressReadyCycle, sb.dataReadyCycle) + self.uop.instrI.uArchConfig.storeForwardDelay # ToDo
          self.__ready = max(self.uop.dispatched + lat, memReady)
       else:
          self.__ready = self.uop.dispatched + lat

@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, storeLineRestrictedPorts=''):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts=''):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -64,8 +64,10 @@ class MicroArchConfig:
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
       self.loadLineSlots = loadLineSlots
+      self.storeForwardDelay = storeForwardDelay # delay between the address and data of a store being ready and a load that reads it
       # store-data ports that a store may only use if another store of the loop writes to the same cache line (see instructions.py)
       self.storeLineRestrictedPorts = storeLineRestrictedPorts
+      self.dataFrom = dataFrom # use the instruction data of this microarchitecture (convertXML.py copies it)
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
@@ -296,3 +298,19 @@ MicroArchConfigs['ADL-P'].loadLineSlots = 2
 # uops.info (1 vs. 6 or more cycles).
 MicroArchConfigs['ADL-P'].memoryRenaming = 'latency' # and loads into general-purpose registers, see instructions.py
 MicroArchConfigs['ADL-P'].experimental = True
+
+# Experimental: Ice Lake server (Sunny Cove). uops.info only has measurements for client Ice Lake, on which move elimination for general-purpose
+# registers is disabled. On a Xeon Gold 6314U, it is enabled (perf, zenbench SET=movs: 'mov r9d, ebx; mov ebx, r9d; or rbx, r8' and the movzx
+# variant run at 1.1 cycles per iteration instead of 3). ICX therefore uses the configuration and the instruction data of Rocket Lake (Cypress
+# Cove, a port of Sunny Cove with move elimination): mean error on 92 scalar zenbench loops measured on the Xeon 6.6%, ICL 17.9%.
+# Timings of vector loops on this Xeon were not reproducible (e.g., a chain of vpaddd: 1 or 4 cycles per iteration in different runs) and were
+# not used.
+MicroArchConfigs['ICX'] = copy.deepcopy(MicroArchConfigs['RKL'])
+MicroArchConfigs['ICX'].name = 'ICX'
+MicroArchConfigs['ICX'].XEDName = 'ICE_LAKE_SERVER'
+MicroArchConfigs['ICX'].dataFrom = 'RKL'
+MicroArchConfigs['ICX'].experimental = True
+# Store-to-load forwarding (no memory renaming on Sunny Cove) takes longer than the model with the default delay predicts: e.g., a read-modify-write
+# instruction on the same address in every iteration or 'mov [rsi], rax; mov rax, [rsi]; add rax, 1' take 7.5 cycles per iteration on the Xeon
+# (predicted with the default: 6). Fitted on the scalar zenbench loops: 5 (mean error 4.1%; 6: 4.4%).
+MicroArchConfigs['ICX'].storeForwardDelay = 5
