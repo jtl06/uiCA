@@ -339,7 +339,10 @@ MicroArchConfigs['ICX'].name = 'ICX'
 MicroArchConfigs['ICX'].XEDName = 'ICE_LAKE_SERVER'
 MicroArchConfigs['ICX'].dataFrom = 'RKL'
 MicroArchConfigs['ICX'].experimental = True
-# Store-to-load forwarding (no memory renaming on Sunny Cove) takes longer than the model with the default delay predicts: e.g., a read-modify-write
-# instruction on the same address in every iteration or 'mov [rsi], rax; mov rax, [rsi]; add rax, 1' take 7.5 cycles per iteration on the Xeon
-# (predicted with the default: 6). Fitted on the scalar zenbench loops: 5 (mean error 4.1%; 6: 4.4%).
-MicroArchConfigs['ICX'].storeForwardDelay = 5
+# Store-to-load forwarding (no memory renaming on Sunny Cove), perf, Xeon Gold 6314U: its latency depends on when the load executes. Chains
+# through memory take 7.0-7.5 cycles per iteration in short loops ('mov [rsi], rax; mov rax, [rsi]; add rax, 1': 7.48, predicted 6 with the
+# default delay; read-modify-write chains, zenbench SET=rmw2, rmwctx: 7.0-7.5), but often only about 4 in loops with more instructions
+# (random loops, e.g. a store and a 32-bit reload in a chain: 4.06). For read-modify-write instructions the delay is one cycle longer than the
+# default (fits the short loops and most random ones); for other loads the default fits the random loops better (fresh set: 81.6% within 10%
+# vs. 80.9% with 5).
+MicroArchConfigs['ICX'].rmwForwardDelayOverride = 5
