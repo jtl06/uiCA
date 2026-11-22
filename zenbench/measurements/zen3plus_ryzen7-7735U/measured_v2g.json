@@ -1,0 +1,42 @@
+{
+ "rt_movq": {
+  "cycles": 6.00478565,
+  "instr": 4.00000325,
+  "expectedInstr": 4
+ },
+ "rt_movd_sse": {
+  "cycles": 6.0048195,
+  "instr": 4.00000315,
+  "expectedInstr": 4
+ },
+ "rt_pinsr_pextr": {
+  "cycles": 8.0053363,
+  "instr": 4.00000385,
+  "expectedInstr": 4
+ },
+ "rt_movq_pextr": {
+  "cycles": 7.004734,
+  "instr": 4.00000315,
+  "expectedInstr": 4
+ },
+ "rt_cvt": {
+  "cycles": 13.0025109,
+  "instr": 4.0000042,
+  "expectedInstr": 4
+ },
+ "rt_movq_msk": {
+  "cycles": 6.00434425,
+  "instr": 4.00000265,
+  "expectedInstr": 4
+ },
+ "rt_movq_add": {
+  "cycles": 7.0046084,
+  "instr": 5.0000028,
+  "expectedInstr": 5
+ },
+ "rt_movq_add_g": {
+  "cycles": 7.00459685,
+  "instr": 5.0000029,
+  "expectedInstr": 5
+ }
+}

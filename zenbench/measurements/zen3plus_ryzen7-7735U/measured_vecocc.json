@@ -1,0 +1,312 @@
+{
+ "occ_phaddw_none": {
+  "cycles": 2.3931104,
+  "instr": 3.000002,
+  "expectedInstr": 3
+ },
+ "occ_phaddw_paddd3": {
+  "cycles": 2.00266955,
+  "instr": 6.00000185,
+  "expectedInstr": 6
+ },
+ "occ_phaddw_pshufb2": {
+  "cycles": 2.4457277,
+  "instr": 5.00000205,
+  "expectedInstr": 5
+ },
+ "occ_phaddw_mulps2": {
+  "cycles": 3.11274645,
+  "instr": 5.00000225,
+  "expectedInstr": 5
+ },
+ "occ_phaddw_addps2": {
+  "cycles": 3.1326889,
+  "instr": 5.00000225,
+  "expectedInstr": 5
+ },
+ "occ_phaddw_cvt2": {
+  "cycles": 3.12939105,
+  "instr": 5.00000225,
+  "expectedInstr": 5
+ },
+ "occ_phaddw_pmovmsk2": {
+  "cycles": 2.50255065,
+  "instr": 5.00000205,
+  "expectedInstr": 5
+ },
+ "occ_mpsadbw_none": {
+  "cycles": 2.0023662,
+  "instr": 3.0000017,
+  "expectedInstr": 3
+ },
+ "occ_mpsadbw_paddd3": {
+  "cycles": 2.00261455,
+  "instr": 6.0000017,
+  "expectedInstr": 6
+ },
+ "occ_mpsadbw_pshufb2": {
+  "cycles": 2.0025791,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_mpsadbw_mulps2": {
+  "cycles": 2.00253475,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_mpsadbw_addps2": {
+  "cycles": 2.0025424,
+  "instr": 5.0000016,
+  "expectedInstr": 5
+ },
+ "occ_mpsadbw_cvt2": {
+  "cycles": 2.00257865,
+  "instr": 5.0000017,
+  "expectedInstr": 5
+ },
+ "occ_mpsadbw_pmovmsk2": {
+  "cycles": 2.00261045,
+  "instr": 5.0000017,
+  "expectedInstr": 5
+ },
+ "occ_hsubps_none": {
+  "cycles": 2.0023851,
+  "instr": 3.00000165,
+  "expectedInstr": 3
+ },
+ "occ_hsubps_paddd3": {
+  "cycles": 2.0025468,
+  "instr": 6.00000165,
+  "expectedInstr": 6
+ },
+ "occ_hsubps_pshufb2": {
+  "cycles": 2.00250905,
+  "instr": 5.0000016,
+  "expectedInstr": 5
+ },
+ "occ_hsubps_mulps2": {
+  "cycles": 2.00256805,
+  "instr": 5.0000017,
+  "expectedInstr": 5
+ },
+ "occ_hsubps_addps2": {
+  "cycles": 2.0025543,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_hsubps_cvt2": {
+  "cycles": 2.0025384,
+  "instr": 5.0000017,
+  "expectedInstr": 5
+ },
+ "occ_hsubps_pmovmsk2": {
+  "cycles": 2.0025252,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_pcmpistri_none": {
+  "cycles": 2.0023756,
+  "instr": 3.0000016,
+  "expectedInstr": 3
+ },
+ "occ_pcmpistri_paddd3": {
+  "cycles": 2.00261645,
+  "instr": 6.0000017,
+  "expectedInstr": 6
+ },
+ "occ_pcmpistri_pshufb2": {
+  "cycles": 2.0025348,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_pcmpistri_mulps2": {
+  "cycles": 2.0025448,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_pcmpistri_addps2": {
+  "cycles": 2.00256165,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_pcmpistri_cvt2": {
+  "cycles": 2.00250995,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_pcmpistri_pmovmsk2": {
+  "cycles": 3.01012895,
+  "instr": 5.00000195,
+  "expectedInstr": 5
+ },
+ "occ_dpps_none": {
+  "cycles": 4.00469705,
+  "instr": 3.0000022,
+  "expectedInstr": 3
+ },
+ "occ_dpps_paddd3": {
+  "cycles": 4.00499485,
+  "instr": 6.0000022,
+  "expectedInstr": 6
+ },
+ "occ_dpps_pshufb2": {
+  "cycles": 4.0049106,
+  "instr": 5.00000215,
+  "expectedInstr": 5
+ },
+ "occ_dpps_mulps2": {
+  "cycles": 4.0048592,
+  "instr": 5.00000215,
+  "expectedInstr": 5
+ },
+ "occ_dpps_addps2": {
+  "cycles": 4.00488205,
+  "instr": 5.00000215,
+  "expectedInstr": 5
+ },
+ "occ_dpps_cvt2": {
+  "cycles": 4.00488735,
+  "instr": 5.00000215,
+  "expectedInstr": 5
+ },
+ "occ_dpps_pmovmsk2": {
+  "cycles": 4.00486615,
+  "instr": 5.00000215,
+  "expectedInstr": 5
+ },
+ "occ_permps_none": {
+  "cycles": 1.00135685,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "occ_permps_paddd3": {
+  "cycles": 1.26680195,
+  "instr": 6.00000155,
+  "expectedInstr": 6
+ },
+ "occ_permps_pshufb2": {
+  "cycles": 1.50423535,
+  "instr": 5.0000015,
+  "expectedInstr": 5
+ },
+ "occ_permps_mulps2": {
+  "cycles": 2.00245185,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_permps_addps2": {
+  "cycles": 1.001316,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "occ_permps_cvt2": {
+  "cycles": 1.00134315,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "occ_permps_pmovmsk2": {
+  "cycles": 2.23264135,
+  "instr": 5.0000018,
+  "expectedInstr": 5
+ },
+ "occ_movmskpd_none": {
+  "cycles": 1.6329391,
+  "instr": 3.00000155,
+  "expectedInstr": 3
+ },
+ "occ_movmskpd_paddd3": {
+  "cycles": 1.63156335,
+  "instr": 6.0000016,
+  "expectedInstr": 6
+ },
+ "occ_movmskpd_pshufb2": {
+  "cycles": 1.6335291,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "occ_movmskpd_mulps2": {
+  "cycles": 1.63301925,
+  "instr": 5.0000016,
+  "expectedInstr": 5
+ },
+ "occ_movmskpd_addps2": {
+  "cycles": 1.632992,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "occ_movmskpd_cvt2": {
+  "cycles": 1.6330314,
+  "instr": 5.0000016,
+  "expectedInstr": 5
+ },
+ "occ_movmskpd_pmovmsk2": {
+  "cycles": 2.3218179,
+  "instr": 5.00000175,
+  "expectedInstr": 5
+ },
+ "occ_phminposuw_none": {
+  "cycles": 1.0012125,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "occ_phminposuw_paddd3": {
+  "cycles": 1.0012825,
+  "instr": 6.0000014,
+  "expectedInstr": 6
+ },
+ "occ_phminposuw_pshufb2": {
+  "cycles": 1.0013206,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "occ_phminposuw_mulps2": {
+  "cycles": 1.50184455,
+  "instr": 5.00000155,
+  "expectedInstr": 5
+ },
+ "occ_phminposuw_addps2": {
+  "cycles": 1.00128085,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "occ_phminposuw_cvt2": {
+  "cycles": 1.0012792,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "occ_phminposuw_pmovmsk2": {
+  "cycles": 2.00219435,
+  "instr": 5.00000165,
+  "expectedInstr": 5
+ },
+ "occ_none_paddd3": {
+  "cycles": 1.001289,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "occ_none_pshufb2": {
+  "cycles": 1.00126075,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ },
+ "occ_none_mulps2": {
+  "cycles": 1.0012769,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ },
+ "occ_none_addps2": {
+  "cycles": 1.00122265,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ },
+ "occ_none_cvt2": {
+  "cycles": 1.0012299,
+  "instr": 4.0000014,
+  "expectedInstr": 4
+ },
+ "occ_none_pmovmsk2": {
+  "cycles": 2.00221745,
+  "instr": 4.0000017,
+  "expectedInstr": 4
+ }
+}

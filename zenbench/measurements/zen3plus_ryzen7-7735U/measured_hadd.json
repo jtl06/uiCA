@@ -1,0 +1,212 @@
+{
+ "hadd_phaddw_none": {
+  "cycles": 2.39422845,
+  "instr": 3.000002,
+  "expectedInstr": 3
+ },
+ "hadd_phaddw_mulps2": {
+  "cycles": 3.13643445,
+  "instr": 5.00000225,
+  "expectedInstr": 5
+ },
+ "hadd_phaddw_addps2": {
+  "cycles": 3.1104876,
+  "instr": 5.00000225,
+  "expectedInstr": 5
+ },
+ "hadd_phaddw_pshufb2": {
+  "cycles": 2.4537057,
+  "instr": 5.00000205,
+  "expectedInstr": 5
+ },
+ "hadd_phaddw_paddd4": {
+  "cycles": 2.6733683,
+  "instr": 7.00000205,
+  "expectedInstr": 7
+ },
+ "hadd_phaddw_int4": {
+  "cycles": 2.743274,
+  "instr": 7.00000215,
+  "expectedInstr": 7
+ },
+ "hadd_phsubd_none": {
+  "cycles": 2.39516445,
+  "instr": 3.000002,
+  "expectedInstr": 3
+ },
+ "hadd_phsubd_mulps2": {
+  "cycles": 3.14617505,
+  "instr": 5.0000021,
+  "expectedInstr": 5
+ },
+ "hadd_phsubd_addps2": {
+  "cycles": 3.123262,
+  "instr": 5.0000019,
+  "expectedInstr": 5
+ },
+ "hadd_phsubd_pshufb2": {
+  "cycles": 2.45771835,
+  "instr": 5.0000018,
+  "expectedInstr": 5
+ },
+ "hadd_phsubd_paddd4": {
+  "cycles": 2.6721509,
+  "instr": 7.0000018,
+  "expectedInstr": 7
+ },
+ "hadd_phsubd_int4": {
+  "cycles": 2.7417887,
+  "instr": 7.00000175,
+  "expectedInstr": 7
+ },
+ "hadd_vphaddw_none": {
+  "cycles": 2.4029525,
+  "instr": 3.00000175,
+  "expectedInstr": 3
+ },
+ "hadd_vphaddw_mulps2": {
+  "cycles": 3.13804475,
+  "instr": 5.0000019,
+  "expectedInstr": 5
+ },
+ "hadd_vphaddw_addps2": {
+  "cycles": 3.1143679,
+  "instr": 5.00000195,
+  "expectedInstr": 5
+ },
+ "hadd_vphaddw_pshufb2": {
+  "cycles": 2.46298985,
+  "instr": 5.00000175,
+  "expectedInstr": 5
+ },
+ "hadd_vphaddw_paddd4": {
+  "cycles": 2.67224025,
+  "instr": 7.00000175,
+  "expectedInstr": 7
+ },
+ "hadd_vphaddw_int4": {
+  "cycles": 2.742291,
+  "instr": 7.00000175,
+  "expectedInstr": 7
+ },
+ "hadd_vphaddswy_none": {
+  "cycles": 2.3498757,
+  "instr": 3.00000175,
+  "expectedInstr": 3
+ },
+ "hadd_vphaddswy_mulps2": {
+  "cycles": 3.2520065,
+  "instr": 5.00000195,
+  "expectedInstr": 5
+ },
+ "hadd_vphaddswy_addps2": {
+  "cycles": 2.29993705,
+  "instr": 5.00000175,
+  "expectedInstr": 5
+ },
+ "hadd_vphaddswy_pshufb2": {
+  "cycles": 2.13685625,
+  "instr": 5.0000018,
+  "expectedInstr": 5
+ },
+ "hadd_vphaddswy_paddd4": {
+  "cycles": 2.6732212,
+  "instr": 7.00000175,
+  "expectedInstr": 7
+ },
+ "hadd_vphaddswy_int4": {
+  "cycles": 2.6717562,
+  "instr": 7.00000175,
+  "expectedInstr": 7
+ },
+ "hadd_haddps_none": {
+  "cycles": 6.3312402,
+  "instr": 3.00000255,
+  "expectedInstr": 3
+ },
+ "hadd_haddps_mulps2": {
+  "cycles": 6.48645365,
+  "instr": 5.00000255,
+  "expectedInstr": 5
+ },
+ "hadd_haddps_addps2": {
+  "cycles": 6.30464815,
+  "instr": 5.00000255,
+  "expectedInstr": 5
+ },
+ "hadd_haddps_pshufb2": {
+  "cycles": 6.2427765,
+  "instr": 5.00000255,
+  "expectedInstr": 5
+ },
+ "hadd_haddps_paddd4": {
+  "cycles": 6.29177865,
+  "instr": 7.00000255,
+  "expectedInstr": 7
+ },
+ "hadd_haddps_int4": {
+  "cycles": 6.3335191,
+  "instr": 7.00000255,
+  "expectedInstr": 7
+ },
+ "hadd_pshufb_none": {
+  "cycles": 1.0026014,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "hadd_pshufb_mulps2": {
+  "cycles": 1.43227315,
+  "instr": 5.0000015,
+  "expectedInstr": 5
+ },
+ "hadd_pshufb_addps2": {
+  "cycles": 1.45133885,
+  "instr": 5.0000015,
+  "expectedInstr": 5
+ },
+ "hadd_pshufb_pshufb2": {
+  "cycles": 1.5030384,
+  "instr": 5.0000015,
+  "expectedInstr": 5
+ },
+ "hadd_pshufb_paddd4": {
+  "cycles": 1.2532819,
+  "instr": 7.00000145,
+  "expectedInstr": 7
+ },
+ "hadd_pshufb_int4": {
+  "cycles": 1.25297845,
+  "instr": 7.00000145,
+  "expectedInstr": 7
+ },
+ "hadd_paddw_none": {
+  "cycles": 1.0024242,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "hadd_paddw_mulps2": {
+  "cycles": 1.11451655,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "hadd_paddw_addps2": {
+  "cycles": 1.16885755,
+  "instr": 5.00000145,
+  "expectedInstr": 5
+ },
+ "hadd_paddw_pshufb2": {
+  "cycles": 1.00242365,
+  "instr": 5.0000014,
+  "expectedInstr": 5
+ },
+ "hadd_paddw_paddd4": {
+  "cycles": 1.2535127,
+  "instr": 7.0000015,
+  "expectedInstr": 7
+ },
+ "hadd_paddw_int4": {
+  "cycles": 1.25231055,
+  "instr": 7.00000145,
+  "expectedInstr": 7
+ }
+}

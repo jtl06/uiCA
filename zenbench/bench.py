@@ -179,6 +179,76 @@ for _name, _rmw in [('add32reg', 'add dword ptr [rsi+64], ecx'), ('add16imm', 'a
 if os.environ.get('SET') == 'rmwpair':
    TESTS = RMWPAIR
    OUT = OUT + '_rmwpair'
+# Zen 3: which FP pipes the vector instructions with a low throughput occupy (select with SET=vecocc)
+VECOCC = {}
+_PROBES = {'phaddw': 'phaddw xmm0, xmm8', 'mpsadbw': 'vmpsadbw xmm0, xmm8, xmm9, 1', 'hsubps': 'vhsubps ymm0, ymm8, ymm9', 'pcmpistri': 'pcmpistri xmm8, xmm9, 1',
+           'dpps': 'vdpps xmm0, xmm8, xmm9, 0xff', 'permps': 'vpermps ymm0, ymm8, ymm9', 'movmskpd': 'vmovmskpd eax, xmm8', 'phminposuw': 'phminposuw xmm0, xmm8'}
+_FILLS = {'none': [], 'paddd3': ['vpaddd xmm4, xmm8, xmm9', 'vpaddd xmm5, xmm8, xmm9', 'vpaddd xmm6, xmm8, xmm9'],
+          'pshufb2': ['vpshufb xmm4, xmm8, xmm9', 'vpshufb xmm5, xmm8, xmm9'], 'mulps2': ['vmulps xmm4, xmm8, xmm9', 'vmulps xmm5, xmm8, xmm9'],
+          'addps2': ['vaddps xmm4, xmm8, xmm9', 'vaddps xmm5, xmm8, xmm9'], 'cvt2': ['vcvtdq2ps xmm4, xmm8', 'vcvtdq2ps xmm5, xmm8'],
+          'pmovmsk2': ['vpmovmskb ecx, xmm8', 'vpmovmskb edx, xmm8']}
+for _p, _pb in _PROBES.items():
+   for _f, _fl in _FILLS.items():
+      VECOCC['occ_%s_%s' % (_p, _f)] = (FP_INIT, '\n'.join([_pb] + _fl))
+for _f, _fl in _FILLS.items():
+   if _fl: VECOCC['occ_none_%s' % _f] = (FP_INIT, '\n'.join(_fl))
+if os.environ.get('SET') == 'vecocc':
+   TESTS = VECOCC
+   OUT = OUT + '_vecocc'
+# Zen 3: latency of horizontal add/subtract chains, alone and with other vector instructions (select with SET=hadd)
+HADD = {}
+for _p, _pb in [('phaddw', 'phaddw xmm0, xmm8'), ('phsubd', 'phsubd xmm0, xmm8'), ('vphaddw', 'vphaddw xmm0, xmm0, xmm8'), ('vphaddswy', 'vphaddsw ymm0, ymm0, ymm8'),
+                ('haddps', 'haddps xmm0, xmm8'), ('pshufb', 'pshufb xmm0, xmm8'), ('paddw', 'paddw xmm0, xmm8')]:
+   for _f, _fl in [('none', []), ('mulps2', ['vmulps xmm4, xmm8, xmm9', 'vmulps xmm5, xmm8, xmm9']), ('addps2', ['vaddps xmm4, xmm8, xmm9', 'vaddps xmm5, xmm8, xmm9']),
+                   ('pshufb2', ['vpshufb xmm4, xmm8, xmm9', 'vpshufb xmm5, xmm8, xmm9']), ('paddd4', ['vpaddd xmm%d, xmm8, xmm9' % r for r in (4, 5, 6, 7)]),
+                   ('int4', ['add rax, 1', 'add rbx, 1', 'add rcx, 1', 'add rdx, 1'])]:
+      HADD['hadd_%s_%s' % (_p, _f)] = (FP_INIT, '\n'.join([_pb] + _fl))
+if os.environ.get('SET') == 'hadd':
+   TESTS = HADD
+   OUT = OUT + '_hadd'
+# Zen 3: forwarding into instructions that are not memory-renamed, mixed integer/vector stores, vector-to-GPR moves (select with SET=zfwd)
+ZFWD = {
+   'lop_nochain':      ('', 'mov qword ptr [rsi+2048], rbx\nadd rax, qword ptr [rsi+2048]'),
+   'lop_nochain_var':  ('', 'add rbx, 1\nmov qword ptr [rsi+2048], rbx\nadd rax, qword ptr [rsi+2048]'),
+   'lop_nochain_add3': ('', 'mov qword ptr [rsi+2048], rbx\nadd rax, qword ptr [rsi+2048]\nadd rcx, 1\nadd rdx, 1\nadd rdi, 1'),
+   'lop_two':          ('', 'mov qword ptr [rsi+2048], rbx\nadd rax, qword ptr [rsi+2048]\nmov qword ptr [rsi+2112], rbx\nadd rcx, qword ptr [rsi+2112]'),
+   'lop32_nochain':    ('', 'mov dword ptr [rsi+2048], ebx\nadd eax, dword ptr [rsi+2048]'),
+   'mov_nochain':      ('', 'mov qword ptr [rsi+2048], rbx\nmov rcx, qword ptr [rsi+2048]'),
+   'lop_noforward':    ('', 'mov qword ptr [rsi+2048], rbx\nadd rax, qword ptr [rsi+1024]'),
+   'vec_fwd':          (FP_INIT, 'movaps xmmword ptr [rsi+2048], xmm8\nmovaps xmm7, xmmword ptr [rsi+2048]'),
+   'vec_fwd_vex':      (FP_INIT, 'vmovaps xmmword ptr [rsi+2048], xmm8\nvmovaps xmm7, xmmword ptr [rsi+2048]'),
+   'vec_fwd_op':       (FP_INIT, 'vmovaps xmmword ptr [rsi+2048], xmm8\nvpaddd xmm7, xmm9, xmmword ptr [rsi+2048]'),
+   'vec_nofwd':        (FP_INIT, 'vmovaps xmmword ptr [rsi+2048], xmm8\nvmovaps xmm7, xmmword ptr [rsi+1024]'),
+   'st_int_vec_lines': (FP_INIT, 'mov qword ptr [rsi+1024], rax\nmovups xmmword ptr [rsi+2048], xmm8'),
+   'st_int_vec_same':  (FP_INIT, 'mov qword ptr [rsi+2048], rax\nmovups xmmword ptr [rsi+2064], xmm8'),
+   'st_vec2_lines':    (FP_INIT, 'movups xmmword ptr [rsi+1024], xmm8\nmovups xmmword ptr [rsi+2048], xmm9'),
+   'st_vec2_same':     (FP_INIT, 'movups xmmword ptr [rsi+2048], xmm8\nmovups xmmword ptr [rsi+2064], xmm9'),
+   'st_int2_vec_lines':(FP_INIT, 'mov qword ptr [rsi+1024], rax\nmov qword ptr [rsi+1088], rax\nmovups xmmword ptr [rsi+2048], xmm8'),
+   'v2g_movmskpd':     (FP_INIT, 'vmovmskpd eax, xmm8'),
+   'v2g_movmskpd_add': (FP_INIT, 'vmovmskpd eax, xmm8\nadd rbx, 1\nadd rcx, 1'),
+   'v2g_movq':         (FP_INIT, 'vmovq rdx, xmm8'),
+   'v2g_movq2':        (FP_INIT, 'vmovq rdx, xmm8\nvmovq rcx, xmm9'),
+   'v2g_pextrq':       (FP_INIT, 'vpextrq rdx, xmm8, 1'),
+   'v2g_movd_chain':   (FP_INIT, 'vmovd xmm0, eax\nvmovd eax, xmm0'),
+   'v2g_cvttsd2si':    (FP_INIT, 'vcvttsd2si rdx, xmm8'),
+}
+if os.environ.get('SET') == 'zfwd':
+   TESTS = ZFWD
+   OUT = OUT + '_zfwd'
+# Zen 3: round trips between general-purpose and vector registers (uops.info gives only upper bounds for their latencies; select with SET=v2g)
+V2G = {
+   'rt_movq':        (FP_INIT, 'vmovq xmm0, rax\nvmovq rax, xmm0'),
+   'rt_movd_sse':    (FP_INIT, 'movd xmm0, eax\nmovd eax, xmm0'),
+   'rt_pinsr_pextr': (FP_INIT, 'vpinsrq xmm0, xmm0, rax, 1\nvpextrq rax, xmm0, 1'),
+   'rt_movq_pextr':  (FP_INIT, 'vmovq xmm0, rax\nvpextrq rax, xmm0, 0'),
+   'rt_cvt':         (FP_INIT, 'vcvtsi2sd xmm0, xmm8, rax\nvcvttsd2si rax, xmm0'),
+   'rt_movq_msk':    (FP_INIT, 'vmovq xmm0, rax\nvmovmskpd eax, xmm0'),
+   'rt_movq_add':    (FP_INIT, 'vmovq xmm0, rax\nvpaddq xmm0, xmm0, xmm8\nvmovq rax, xmm0'),
+   'rt_movq_add_g':  (FP_INIT, 'vmovq xmm0, rax\nvmovq rax, xmm0\nadd rax, 1'),
+}
+if os.environ.get('SET') == 'v2g':
+   TESTS = V2G
+   OUT = OUT + '_v2g'
 # Register moves: same register (never eliminated) and zero-extending moves that may be eliminated (select with SET=movs)
 MOVS = {
    'mov_samereg32':  ('', 'mov r11d, r11d\nsub r11, r12'),

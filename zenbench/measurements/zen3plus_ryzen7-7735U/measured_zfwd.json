@@ -1,0 +1,117 @@
+{
+ "lop_nochain": {
+  "cycles": 1.00027495,
+  "instr": 4.00000125,
+  "expectedInstr": 4
+ },
+ "lop_nochain_var": {
+  "cycles": 1.00044365,
+  "instr": 5.0000012,
+  "expectedInstr": 5
+ },
+ "lop_nochain_add3": {
+  "cycles": 1.5082928,
+  "instr": 7.0000014,
+  "expectedInstr": 7
+ },
+ "lop_two": {
+  "cycles": 2.00050855,
+  "instr": 6.00000155,
+  "expectedInstr": 6
+ },
+ "lop32_nochain": {
+  "cycles": 1.00029275,
+  "instr": 4.00000125,
+  "expectedInstr": 4
+ },
+ "mov_nochain": {
+  "cycles": 1.000247,
+  "instr": 4.0000012,
+  "expectedInstr": 4
+ },
+ "lop_noforward": {
+  "cycles": 1.0002683,
+  "instr": 4.00000125,
+  "expectedInstr": 4
+ },
+ "vec_fwd": {
+  "cycles": 1.00136885,
+  "instr": 4.00000155,
+  "expectedInstr": 4
+ },
+ "vec_fwd_vex": {
+  "cycles": 1.0013661,
+  "instr": 4.00000155,
+  "expectedInstr": 4
+ },
+ "vec_fwd_op": {
+  "cycles": 1.00138735,
+  "instr": 4.00000155,
+  "expectedInstr": 4
+ },
+ "vec_nofwd": {
+  "cycles": 1.00131355,
+  "instr": 4.00000155,
+  "expectedInstr": 4
+ },
+ "st_int_vec_lines": {
+  "cycles": 2.00225095,
+  "instr": 4.00000165,
+  "expectedInstr": 4
+ },
+ "st_int_vec_same": {
+  "cycles": 1.00130475,
+  "instr": 4.00000145,
+  "expectedInstr": 4
+ },
+ "st_vec2_lines": {
+  "cycles": 2.00236035,
+  "instr": 4.0000017,
+  "expectedInstr": 4
+ },
+ "st_vec2_same": {
+  "cycles": 2.0023467,
+  "instr": 4.0000018,
+  "expectedInstr": 4
+ },
+ "st_int2_vec_lines": {
+  "cycles": 3.00338455,
+  "instr": 5.00000195,
+  "expectedInstr": 5
+ },
+ "v2g_movmskpd": {
+  "cycles": 1.6329754,
+  "instr": 3.00000155,
+  "expectedInstr": 3
+ },
+ "v2g_movmskpd_add": {
+  "cycles": 1.7290955,
+  "instr": 5.00000175,
+  "expectedInstr": 5
+ },
+ "v2g_movq": {
+  "cycles": 1.0011796,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "v2g_movq2": {
+  "cycles": 2.0021655,
+  "instr": 4.0000016,
+  "expectedInstr": 4
+ },
+ "v2g_pextrq": {
+  "cycles": 1.0012255,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ },
+ "v2g_movd_chain": {
+  "cycles": 6.0044178,
+  "instr": 4.0000027,
+  "expectedInstr": 4
+ },
+ "v2g_cvttsd2si": {
+  "cycles": 1.00126155,
+  "instr": 3.0000014,
+  "expectedInstr": 3
+ }
+}
