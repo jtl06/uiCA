@@ -230,7 +230,7 @@ MicroArchConfigs['CLX_SimplePorts_noMoveElim'].moveEliminationSIMDSlots = 0
 #   (at most two stores per cycle), FP0-5 = k-p, FP store data = x
 MicroArchConfigs['ZEN3'] = MicroArchConfig(
    name = 'ZEN3',
-   XEDName = 'AMD_FUTURE', # the XED version used here has no chip definition for Zen 3
+   XEDName = 'ALL', # the XED version used here has no chip definition for Zen 3, and its AMD chips lack BMI1 (TZCNT would decode as BSF)
    IQWidth = 25, # not used (no front-end model)
    DSBWidth = 8, # not used (no front-end model)
    IDQWidth = 64, # not used (no front-end model)
