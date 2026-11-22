@@ -1,0 +1,76 @@
+== ZEN3: 3000 loops generated, 2823 compared; excluded: {'instruction without uiCA data': 93, 'unstable measurement': 53, 'no prediction from llvm-mca znver3': 20, 'no prediction from uiCA ZEN3': 11}
+   uiCA ZEN3             2823 loops: mean   6.1%, median   0.1%, within 10%:  77.8%, too fast/too slow by >10%: 15.9% /  6.3%
+   llvm-mca znver3       2823 loops: mean  17.9%, median   8.0%, within 10%:  54.9%, too fast/too slow by >10%: 30.4% / 14.7%
+   by tag (uiCA ZEN3 | llvm-mca znver3):
+      plain (no rmw, not value-dependent)  2493 loops: mean   5.7% |  16.6%   within 10%:  78.9% |  56.6%
+      int                                   380 loops: mean   7.1% |  27.7%   within 10%:  72.6% |  37.9%
+      sse                                  1056 loops: mean   6.2% |  19.0%   within 10%:  78.0% |  55.7%
+      avx                                  1387 loops: mean   5.7% |  14.3%   within 10%:  79.0% |  58.9%
+      load                                 2341 loops: mean   6.2% |  19.0%   within 10%:  77.6% |  53.7%
+      store                                 895 loops: mean   5.6% |  17.1%   within 10%:  80.1% |  55.4%
+      rmw                                   221 loops: mean  11.3% |  35.0%   within 10%:  57.9% |  25.3%
+      value-dependent                       115 loops: mean   3.6% |  11.8%   within 10%:  92.2% |  74.8%
+== ADL-P: 3000 loops generated, 2778 compared; excluded: {'instruction without uiCA data': 92, 'unstable measurement': 93, 'no prediction from llvm-mca alderlake': 37}
+   uiCA ADL-P            2778 loops: mean   3.6%, median   0.0%, within 10%:  87.3%, too fast/too slow by >10%:  9.0% /  3.7%
+   stock uiCA RKL        2778 loops: mean  17.5%, median  11.3%, within 10%:  47.2%, too fast/too slow by >10%:  4.6% / 48.2%
+   llvm-mca alderlake    2778 loops: mean  34.2%, median  25.1%, within 10%:  34.4%, too fast/too slow by >10%:  9.8% / 55.8%
+   by tag (uiCA ADL-P | llvm-mca alderlake):
+      plain (no rmw, not value-dependent)  2446 loops: mean   3.2% |  33.2%   within 10%:  88.5% |  35.5%
+      int                                   377 loops: mean   5.8% |  43.8%   within 10%:  80.4% |  29.2%
+      sse                                  1030 loops: mean   3.5% |  35.8%   within 10%:  87.4% |  33.4%
+      avx                                  1371 loops: mean   3.0% |  30.2%   within 10%:  89.1% |  36.6%
+      load                                 2299 loops: mean   3.6% |  36.1%   within 10%:  87.3% |  31.9%
+      store                                 880 loops: mean   3.3% |  31.3%   within 10%:  87.6% |  36.9%
+      rmw                                   222 loops: mean   6.8% |  47.9%   within 10%:  77.0% |  18.9%
+      value-dependent                       117 loops: mean   4.6% |  29.0%   within 10%:  82.9% |  40.2%
+== ICL: 3000 loops generated, 2721 compared; excluded: {'instruction without uiCA data': 93, 'unstable measurement': 167, 'no prediction from llvm-mca icelake-server': 19}
+   uiCA ICX              2721 loops: mean   4.7%, median   0.9%, within 10%:  81.9%, too fast/too slow by >10%:  8.2% /  9.9%
+   uiCA ICL              2721 loops: mean   5.9%, median   1.1%, within 10%:  80.2%, too fast/too slow by >10%: 11.0% /  8.7%
+   stock uiCA ICL        2721 loops: mean   6.2%, median   1.1%, within 10%:  79.8%, too fast/too slow by >10%: 11.4% /  8.7%
+   llvm-mca icelake-server  2721 loops: mean  22.6%, median   8.4%, within 10%:  54.5%, too fast/too slow by >10%: 20.1% / 25.4%
+   by tag (uiCA ICX | llvm-mca icelake-server):
+      plain (no rmw, not value-dependent)  2417 loops: mean   4.2% |  21.4%   within 10%:  84.9% |  57.5%
+      int                                   361 loops: mean   6.3% |  32.9%   within 10%:  74.8% |  40.2%
+      sse                                  1023 loops: mean   5.0% |  27.2%   within 10%:  80.4% |  50.6%
+      avx                                  1337 loops: mean   4.0% |  16.3%   within 10%:  84.9% |  61.3%
+      load                                 2249 loops: mean   4.7% |  24.2%   within 10%:  81.3% |  53.7%
+      store                                 855 loops: mean   4.5% |  21.7%   within 10%:  81.8% |  55.2%
+      rmw                                   197 loops: mean  11.2% |  42.5%   within 10%:  44.2% |   8.1%
+      value-dependent                       114 loops: mean   4.6% |  13.8%   within 10%:  80.7% |  69.3%
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xa len: 5 PC: 0xa: [C4E270F3DD]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x6 len: 5 PC: 0x6: [C4C255DFDE]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x27 len: 5 PC: 0x27: [C4C2E8F3D0]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x6 len: 9 PC: 0x6: [C4E2E0F29E10010000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 6 PC: 0x0: [C4E25DDC4E20]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x16 len: 9 PC: 0x16: [C4E2E0F38EA0000000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x33 len: 9 PC: 0x33: [C4E2F0F786D8020000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xc len: 5 PC: 0xc: [C4E2A8F3DA]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x14 len: 5 PC: 0x14: [C4E2E8F3D5]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x29 len: 5 PC: 0x29: [C4C275DDCB]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x21 len: 10 PC: 0x21: [C4A205DE8436C0010000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 6 PC: 0x0: [C4C37544F702]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x18 len: 5 PC: 0x18: [C442B0F2CD]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x11 len: 9 PC: 0x11: [C4E228F38EA8000000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x4 len: 10 PC: 0x4: [C4A2A8F78C3680010000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x20 len: 9 PC: 0x20: [C4E2A0F39E88010000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 10 PC: 0x0: [C4A270F3943648010000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x14 len: 5 PC: 0x14: [C4E21DDDDF]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 5 PC: 0x0: [C46220F2E8]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x6 len: 5 PC: 0x6: [C4E2B0F3CF]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xa len: 9 PC: 0xa: [C4E278F38E50030000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 5 PC: 0x0: [C4E2A8F7D7]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 10 PC: 0x0: [C4A2E0F39C36C8000000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x6 len: 5 PC: 0x6: [C4E225DFC7]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 10 PC: 0x0: [C4A2B8F3943680000000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x23 len: 5 PC: 0x23: [C4E215DDF2]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 9 PC: 0x0: [C4E25DDE8EC0020000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x23 len: 5 PC: 0x23: [C4C268F3D3]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x0 len: 5 PC: 0x0: [C4C275DCFE]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x3c len: 5 PC: 0x3c: [C4E2E0F2C9]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xa len: 10 PC: 0xa: [C4A2E0F38C3690000000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x3 len: 10 PC: 0x3: [C42290F79C36F8000000]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xc len: 5 PC: 0xc: [C4C230F7CD]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xb len: 5 PC: 0xb: [C4E238F3DD]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x28 len: 5 PC: 0x28: [C4C275DFF2]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0xd len: 5 PC: 0xd: [C4E270F3D0]
+ERROR: INVALID_FOR_CHIP Could not decode at offset: 0x23 len: 10 PC: 0x23: [C4A270F3943610010000]
