@@ -1,3 +1,4 @@
+import re
 from typing import List
 
 import xed
@@ -47,6 +48,7 @@ class Instr:
       self.cannotBeInDSBDueToJCCErratum = False
       self.foldedInputReg = None # canonical register; see MicroArchConfig.renameImmediateFolding
       self.memRenaming = False # see MicroArchConfig.memoryRenaming
+      self.TPKey = instrStr # instructions with the same key share the throughput limit TP
       self.UopPropertiesList = [] # list with UopProperties for each (unfused domain) uop
       self.regMergeUopPropertiesList = []
       self.isNextToLastInstr = False
@@ -406,6 +408,16 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                del instr.portData[pc]
                newPc = ''.join(p for p in pc if p not in uArchConfig.storeLineRestrictedPorts)
                instr.portData[newPc] = instr.portData.get(newPc, 0) + n
+
+   if uArchConfig.narrowStorePenalty:
+      def line(memAddr):
+         return (memAddr.get('base'), memAddr.get('index'), memAddr.get('scale'), (memAddr.get('disp') or 0) // 64)
+      lines = set(line(memOp.memAddr) for instr in instructions for memOp in instr.outputMemOperands)
+      narrow = [instr for instr in instructions if instr.outputMemOperands and re.search(r'\(M(8|16)\b', instr.instrStr)]
+      if narrow and len(lines) >= 2:
+         # modeled as a throughput limit for one of the narrow stores (with its own key, see Scheduler)
+         narrow[0].TP = max(narrow[0].TP or 0, len(lines) + uArchConfig.narrowStorePenalty)
+         narrow[0].TPKey = ('narrowStore', id(narrow[0]))
 
    if len(instructions) > 0:
       instructions[-1].isLastInstr = True

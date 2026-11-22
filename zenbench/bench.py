@@ -133,6 +133,29 @@ MOVS = {
 if os.environ.get('SET') == 'movs':
    TESTS = MOVS
    OUT = OUT + '_movs'
+# Zen 3 stores (select with SET=stores): same-line pairing, store-to-load forwarding into a load-op instruction, 8- and 16-bit stores
+STORES = {
+   'st2_lines':      ('', 'mov qword ptr [rsi+64], rax\nmov qword ptr [rsi+128], rbx'),
+   'st2_sameline':   ('', 'mov qword ptr [rsi+64], rax\nmov qword ptr [rsi+72], rbx'),
+   'st4_lines':      ('', 'mov qword ptr [rsi+64], rax\nmov qword ptr [rsi+128], rbx\nmov qword ptr [rsi+192], rcx\nmov qword ptr [rsi+256], rdx'),
+   'st4_sameline':   ('', 'mov qword ptr [rsi+64], rax\nmov qword ptr [rsi+72], rbx\nmov qword ptr [rsi+80], rcx\nmov qword ptr [rsi+88], rdx'),
+   'fwd_mov':        ('', 'mov [rsi+2048], rax\nmov rax, [rsi+2048]\nadd rax, 1'),
+   'fwd_loadop':     ('', 'mov [rsi+2048], rax\nadd rax, [rsi+2048]'),
+   'fwd_loadop32':   ('', 'mov [rsi+2048], eax\nadd eax, dword ptr [rsi+2048]'),
+   'fwd_narrow':     ('', 'mov [rsi+2048], rax\nmov eax, dword ptr [rsi+2048]\nadd rax, 1'),
+   'byte_alone':     ('', 'mov byte ptr [rsi+64], al'),
+   'byte_q':         ('', 'mov byte ptr [rsi+64], al\nmov qword ptr [rsi+192], rbx'),
+   'byte_q_sameline':('', 'mov byte ptr [rsi+64], al\nmov qword ptr [rsi+72], rbx'),
+   'dword_q':        ('', 'mov dword ptr [rsi+64], eax\nmov qword ptr [rsi+192], rbx'),
+   'setcc_q':        ('', 'setbe byte ptr [rsi+64]\nmov qword ptr [rsi+192], rbx'),
+   'word_word':      ('', 'mov word ptr [rsi+64], ax\nmov word ptr [rsi+192], bx'),
+   'bytes3':         ('', 'mov byte ptr [rsi+64], al\nmov byte ptr [rsi+192], bl\nmov byte ptr [rsi+320], cl'),
+   'byte_q3':        ('', 'mov byte ptr [rsi+64], al\nmov qword ptr [rsi+192], rbx\nmov qword ptr [rsi+320], rcx\nmov qword ptr [rsi+448], rdx'),
+   'byte_q_add4':    ('', 'mov byte ptr [rsi+64], al\nmov qword ptr [rsi+192], rbx\nadd r8, 1\nadd r9, 1\nadd r10, 1\nadd r11, 1'),
+}
+if os.environ.get('SET') == 'stores':
+   TESTS = STORES
+   OUT = OUT + '_stores'
 if os.environ.get('SET') == 'heldout':
    TESTS = HELDOUT
    OUT = OUT + '_heldout'

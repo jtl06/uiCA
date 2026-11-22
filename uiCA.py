@@ -998,7 +998,7 @@ class Scheduler:
             return False
 
       # the limit may be a fraction of a cycle; for integers, this is the same as checking for '> 0'
-      if uop.prop.isFirstUopOfInstr and self.blockedResources.get(uop.prop.instr.instrStr, 0) >= 1:
+      if uop.prop.isFirstUopOfInstr and self.blockedResources.get(uop.prop.instr.TPKey, 0) >= 1:
          return False
 
       readyForDispatchCycle = self.getReadyForDispatchCycle(clock, uop)
@@ -1009,7 +1009,7 @@ class Scheduler:
       self.uopsReadyInCycle.setdefault(readyForDispatchCycle, []).append(uop)
 
       if uop.prop.isFirstUopOfInstr and (uop.prop.instr.TP is not None):
-         self.blockedResources[uop.prop.instr.instrStr] = self.blockedResources.get(uop.prop.instr.instrStr, 0) + uop.prop.instr.TP
+         self.blockedResources[uop.prop.instr.TPKey] = self.blockedResources.get(uop.prop.instr.TPKey, 0) + uop.prop.instr.TP
 
       if uop.prop.isLoadUop:
          self.loadUopsSinceLastLoadFence.append(uop)

@@ -1,0 +1,87 @@
+{
+ "st2_lines": {
+  "cycles": 2.00043594,
+  "instr": 4.00000102,
+  "expectedInstr": 4
+ },
+ "st2_sameline": {
+  "cycles": 1.0002244,
+  "instr": 4.0000007,
+  "expectedInstr": 4
+ },
+ "st4_lines": {
+  "cycles": 4.00073358,
+  "instr": 6.00000126,
+  "expectedInstr": 6
+ },
+ "st4_sameline": {
+  "cycles": 2.00034982,
+  "instr": 6.00000086,
+  "expectedInstr": 6
+ },
+ "fwd_mov": {
+  "cycles": 1.00026214,
+  "instr": 5.0000006,
+  "expectedInstr": 5
+ },
+ "fwd_loadop": {
+  "cycles": 8.23524538,
+  "instr": 4.0000022,
+  "expectedInstr": 4
+ },
+ "fwd_loadop32": {
+  "cycles": 8.24112708,
+  "instr": 4.00000222,
+  "expectedInstr": 4
+ },
+ "fwd_narrow": {
+  "cycles": 1.00025312,
+  "instr": 5.0000006,
+  "expectedInstr": 5
+ },
+ "byte_alone": {
+  "cycles": 1.00019456,
+  "instr": 3.0000006,
+  "expectedInstr": 3
+ },
+ "byte_q": {
+  "cycles": 5.00091048,
+  "instr": 4.00000152,
+  "expectedInstr": 4
+ },
+ "byte_q_sameline": {
+  "cycles": 1.00021976,
+  "instr": 4.00000062,
+  "expectedInstr": 4
+ },
+ "dword_q": {
+  "cycles": 2.00038256,
+  "instr": 4.00000088,
+  "expectedInstr": 4
+ },
+ "setcc_q": {
+  "cycles": 5.00084646,
+  "instr": 4.00000148,
+  "expectedInstr": 4
+ },
+ "word_word": {
+  "cycles": 5.00087562,
+  "instr": 4.00000146,
+  "expectedInstr": 4
+ },
+ "bytes3": {
+  "cycles": 6.00105096,
+  "instr": 5.00000182,
+  "expectedInstr": 5
+ },
+ "byte_q3": {
+  "cycles": 7.00128966,
+  "instr": 6.00000198,
+  "expectedInstr": 6
+ },
+ "byte_q_add4": {
+  "cycles": 5.00087484,
+  "instr": 8.00000156,
+  "expectedInstr": 8
+ }
+}
