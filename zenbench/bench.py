@@ -120,6 +120,19 @@ RMW = {
 if os.environ.get('SET') == 'rmw':
    TESTS = RMW
    OUT = OUT + '_rmw'
+# Register moves: same register (never eliminated) and zero-extending moves that may be eliminated (select with SET=movs)
+MOVS = {
+   'mov_samereg32':  ('', 'mov r11d, r11d\nsub r11, r12'),
+   'movzx_samereg':  ('', 'movzx ebx, bl\nor rbx, r8'),
+   'movzx_other':    ('', 'movzx ebx, r9b\nor rbx, r8'),
+   'movzx_chain':    ('', 'movzx r9d, bl\nmovzx ebx, r9b\nadd rbx, 1'),
+   'movzx_chain_or': ('', 'movzx r9d, bl\nmovzx ebx, r9b\nor rbx, r8'),
+   'mov32_chain':    ('', 'mov r9d, ebx\nmov ebx, r9d\nor rbx, r8'),
+   'mov64_chain':    ('', 'mov r9, rbx\nmov rbx, r9\nor rbx, r8'),
+}
+if os.environ.get('SET') == 'movs':
+   TESTS = MOVS
+   OUT = OUT + '_movs'
 if os.environ.get('SET') == 'heldout':
    TESTS = HELDOUT
    OUT = OUT + '_heldout'

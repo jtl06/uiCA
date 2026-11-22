@@ -175,6 +175,30 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                portData = perfData.get('ports_SR', portData)
                latData = perfData.get('lat_SR', latData)
 
+            isRegMove = (('MOV' in instrData['string']) and (len(instrInputRegOperands) == 1) and (len(instrOutputRegOperands) == 1)
+                         and (not instrD['memOperands']))
+            if uArchConfig.experimental and isRegMove and (not sameReg) and uops and (latData.get((instrInputRegOperands[0][0], instrOutputRegOperands[0][0]), 1) == 0):
+               # e.g., movzx on Golden Cove: uops.info measured a latency of 0, i.e., the instruction is eliminated at rename (perf, Core i7-12650H:
+               # 'movzx r9d, bl; movzx ebx, r9b; or rbx, r8' runs at 1 cycle per iteration)
+               mayBeEliminated = True
+            if (uArchConfig.experimental and isRegMove and sameReg and uArchConfig.sameRegMoveEliminated
+                  and instrD['iform'].split('_')[0] == 'MOV'):
+               # e.g., 'mov eax, eax' on Zen 3
+               mayBeEliminated = True
+               uops = 0
+               portData = {}
+               latData = {}
+            elif uArchConfig.experimental and isRegMove and sameReg:
+               # A move whose source and destination are the same register (e.g., 'mov eax, eax', 'movzx ebx, bl') is not eliminated; for the
+               # experimental configurations, the instruction data does not always contain its same-register variant.
+               from instrData.uArchInfo import ALUPorts
+               mayBeEliminated = False
+               uops = max(uops, 1)
+               if not portData:
+                  portData = {''.join(ALUPorts[uArchConfig.name]): 1}
+               latData = dict(latData)
+               latData[(instrInputRegOperands[0][0], instrOutputRegOperands[0][0])] = max(1, latData.get((instrInputRegOperands[0][0], instrOutputRegOperands[0][0]), 1))
+
             inputRegOperands = []
             inputFlagOperands = []
             inputMemOperands = []
@@ -206,7 +230,10 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
 
             latencies = dict()
             for inpN, inpR in instrInputRegOperands:
-               if (not mayBeEliminated) and all(latData.get((inpN, o), 1) == 0 for o in outputOperandsDict.keys()): # e.g., zero idioms
+               # e.g., zero idioms; for the experimental configurations, only for instructions whose operands are the same register (with
+               # different registers, a latency of 0 means that the output is available as soon as the input is, e.g., an eliminated movzx)
+               if ((not mayBeEliminated) and (sameReg or not uArchConfig.experimental)
+                     and all(latData.get((inpN, o), 1) == 0 for o in outputOperandsDict.keys())):
                   continue
                regOp = RegOperand(inpR)
                inputRegOperands.append(regOp)
