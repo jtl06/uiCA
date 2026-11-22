@@ -9,7 +9,7 @@ class MicroArchConfig:
                 moveEliminationSIMDSlots=4, moveEliminationGPRAllAliasesMustBeOverwritten=True, LSDEnabled=True, LSDUnrolling={}, fastPointerChasing=True,
                 slow256BitMemAcc=False, DSBBlockSize=32, simplePortAssignment=False, isAMD=False, loadPorts='23', storeAddrPorts='78',
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
-                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None):
+                renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, storeLineRestrictedPorts=''):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -64,6 +64,8 @@ class MicroArchConfig:
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
       self.loadLineSlots = loadLineSlots
+      # store-data ports that a store may only use if another store of the loop writes to the same cache line (see instructions.py)
+      self.storeLineRestrictedPorts = storeLineRestrictedPorts
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
 MicroArchConfigs: Dict[str, MicroArchConfig] = {}
@@ -242,6 +244,9 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    isAMD = True,
    experimental = True,
    memoryRenaming = 'data',
+   # perf, Ryzen 7 7735U: two stores per cycle only if they write to the same cache line ('mov [rsi], rax; mov [rsi+8], rax': 1 cycle per
+   # iteration; [rsi] and [rsi+64]: 2 cycles; four stores to different lines: 4 cycles)
+   storeLineRestrictedPorts = 't',
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (zenbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py

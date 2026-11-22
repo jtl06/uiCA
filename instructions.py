@@ -393,6 +393,20 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                newPc = ''.join(p for p in pc if p not in restrictedPorts)
                instr.portData[newPc] = instr.portData.get(newPc, 0) + n
 
+   if uArchConfig.storeLineRestrictedPorts:
+      def storeLine(memAddr):
+         return (memAddr.get('base'), memAddr.get('index'), memAddr.get('scale'), (memAddr.get('disp') or 0) // 64)
+      stores = [(instr, storeLine(memOp.memAddr)) for instr in instructions for memOp in instr.outputMemOperands]
+      for instr, line in stores:
+         if any((l == line) for i2, l in stores if i2 is not instr):
+            continue
+         instr.portData = dict(instr.portData)
+         for pc, n in list(instr.portData.items()):
+            if any(p in uArchConfig.storeDataPorts for p in pc) and any(p in uArchConfig.storeLineRestrictedPorts for p in pc):
+               del instr.portData[pc]
+               newPc = ''.join(p for p in pc if p not in uArchConfig.storeLineRestrictedPorts)
+               instr.portData[newPc] = instr.portData.get(newPc, 0) + n
+
    if len(instructions) > 0:
       instructions[-1].isLastInstr = True
       if uArchConfig.takenBranchPort and instructions[-1].isBranchInstr:
