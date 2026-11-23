@@ -1,0 +1,34 @@
+# round 7: consumers of a register whose value the renamer computed (ADL-P immediate folding: 64-bit add/sub with an 8-bit immediate, inc,
+# dec, lea with base and displacement)
+f1: ADD R13, 2; SHL R13, 5
+f2: ADD R13, 2; ROR R13, 5
+f3: ADD R13, 2; IMUL R13, R13
+f4: ADD R13, 2; AND R13, R8
+f5: ADD R13, 2; ADD R13, R8
+f6: ADD R13, 2; XOR R13, R8
+f7: ADD R13, 2; SHLX R13, R13, R8
+f8: ADD R13, 2; LEA R13, [R13+R8]
+f9: ADD R13, 2; MOV qword ptr [RSI+64], R13; MOV R13, qword ptr [RSI+64]
+f10: ADD R13, 2; BSWAP R13
+f11: ADD R13, 2; NOT R13
+f12: ADD R13, 2; SAR R13, CL
+f13: ADD R13, 2; RCL R13, 1
+f14: ADD R13, 2; SHLD R13, R8, 3
+f15: ADD R13, 2; CMOVZ R13, R8
+f16: ADD R13, 2; ADC R13, R8
+f17: ADD R13, 2; MOVQ XMM1, R13; MOVQ R13, XMM1
+f18: ADD R13, 2; POPCNT R13, R13
+f19: ADD R13, 2; NEG R13
+f20: LEA R13, [R13+8]; SHL R13, 3
+f21: INC R13; SHL R13, 1
+f22: ADD R13D, 2; SHL R13D, 5
+f23: SUB R13, 2; SHR R13, 1
+f24: ADD R13, 2; ROL R13, 1
+f25: ADD R13, 2; SHL R13, 5; ADD R13, 3; SHL R13, 1
+f26: ADD R13, 2; MOV R12, R13; SHL R12, 5; MOV R13, R12
+f27: ADD R13, 2; SHL R13, 5; OR R9, R8; OR R10, R8; OR R11, R8
+f28: SHL R13, 5
+f29: ADD R13, 2; SUB R13, R8
+f30: ADD R13, 2; ANDN R13, R13, R8
+f31: ADD R13, 2; TZCNT R13, R13
+f32: ADD R13, 2; MOVSXD R13, R13D

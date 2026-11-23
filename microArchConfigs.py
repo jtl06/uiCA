@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, foldedShiftDelay=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -78,6 +78,9 @@ class MicroArchConfig:
       # op-cache entry, and no other instruction is delivered until the microcode sequencer has delivered its macro-ops, microcodeWidth per cycle
       self.microcodeOps = microcodeOps
       self.microcodeWidth = microcodeWidth
+      # renameImmediateFolding: additional latency for a shift or rotate (also SHLX, SHRX, SARX, RORX) that reads a register whose value was
+      # computed by the renamer (e.g., the result of 'add rax, 1')
+      self.foldedShiftDelay = foldedShiftDelay
       # if set: the number of different cache lines that loads can access per cycle; loads to the same line at different offsets share an access.
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
@@ -382,6 +385,11 @@ MicroArchConfigs['ADL-P'].storeForwardFailDelay = 15
 MicroArchConfigs['ADL-P'].storeForwardDelay = 5
 MicroArchConfigs['ADL-P'].rmwForwardDelayOverride = 4 # read-modify-write chains (microbench SET=rmw2, rmwctx) fit the default delay
 MicroArchConfigs['ADL-P'].loadValueNumbering = True
+# perf, Core i7-12650H (microbench SET=fold7): a register whose value the renamer computed is used by most instructions at no cost ('add r13, 2;
+# and r13, r8', also add, sub, xor, lea, not, neg, andn, stores: 1 cycle per iteration), but shifts and rotates get it two cycles later ('add r13, 2;
+# shl r13, 5', also lea/inc/sub + shl/shr/rol/ror/shlx: 3 cycles; 'shl r13, 5' alone: 1) and CMOVcc and ADC one cycle later ('add r13, 2; cmovz
+# r13, r8': 2; not modeled: it made the check sets slightly worse); IMUL, POPCNT, TZCNT (port 1) at no cost
+MicroArchConfigs['ADL-P'].foldedShiftDelay = 2
 MicroArchConfigs['ADL-P'].experimental = True
 
 # Experimental: Ice Lake server (Sunny Cove). uops.info only has measurements for client Ice Lake, on which move elimination for general-purpose

@@ -55,7 +55,7 @@ class UopProperties:
 # and objects without a __dict__ are smaller and have faster attribute access.
 class Uop:
    __slots__ = ('idx', 'prop', 'instrI', 'fusedUop', 'actualPort', 'eliminated', 'renamedInputOperands', 'renamedOutputOperands', 'storeBufferEntry',
-                'memRenamingBlocked', 'forwardFails', 'latReducedDueToFastPtrChasing', 'readyForDispatch', 'dispatched', 'executed')
+                'memRenamingBlocked', 'foldedInputs', 'forwardFails', 'latReducedDueToFastPtrChasing', 'readyForDispatch', 'dispatched', 'executed')
    idx_iter = count()
 
    def __init__(self, prop, instrI):
@@ -69,6 +69,7 @@ class Uop:
       self.renamedOutputOperands: List[RenamedOperand] = []
       self.storeBufferEntry = None
       self.memRenamingBlocked = False # see MicroArchConfig.memRenamingWidths
+      self.foldedInputs = None # renamed input operands that the instruction gets later (MicroArchConfig.foldedShiftDelay)
       self.forwardFails = False # the load is wider than the store it reads from
       self.latReducedDueToFastPtrChasing = False
       self.readyForDispatch = None
@@ -180,6 +181,14 @@ class RenamedOperand:
 
 
 RenameDictEntry = namedtuple('RenameDictEntry', ['renamedOp', 'renamedByElim32BitMove'])
+FOLDED_SHIFT_RE = re.compile(r'^(SHL|SHR|SAR|SAL|ROL|ROR|SHLX|SHRX|SARX|RORX)[ _]')
+
+# the additional latency of an instruction for a register whose value was computed by the renamer (MicroArchConfig.foldedShiftDelay)
+def getFoldedInputDelay(instr, uArchConfig: MicroArchConfig):
+   if FOLDED_SHIFT_RE.match(instr.instrStr):
+      return uArchConfig.foldedShiftDelay
+   return 0
+
 class Renamer:
    def __init__(self, IDQ, reorderBuffer, uArchConfig: MicroArchConfig, initPolicy):
       self.IDQ = IDQ
@@ -343,6 +352,7 @@ class Renamer:
                                          for op in prop.outputOperands])
                   inKeys, outKeys = prop.renameKeys
                   renameDict = self.renameDict
+                  foldedDelay = getFoldedInputDelay(prop.instr, self.uArchConfig) if self.uArchConfig.renameImmediateFolding else 0
                   for inpOp, isPseudo, key in inKeys:
                      if isPseudo:
                         renOp = self.curInstrPseudoOpDict[inpOp]
@@ -351,6 +361,9 @@ class Renamer:
                         if entry is None:
                            entry = renameDict[key] = RenameDictEntry(RenamedOperand(ready=-1), False)
                         renOp = entry.renamedOp
+                        if foldedDelay and (key in self.foldedWidth):
+                           if uop.foldedInputs is None: uop.foldedInputs = []
+                           uop.foldedInputs.append(renOp)
                      uop.renamedInputOperands.append(renOp)
                   for outOp, isPseudo, key, isReg in outKeys:
                      renOp = RenamedOperand(outOp, uop)
@@ -1261,6 +1274,8 @@ class Scheduler:
          r = renInpOp.getReadyCycle()
          if r is None:
             return None
+         if (uop.foldedInputs is not None) and any(o is renInpOp for o in uop.foldedInputs):
+            r += getFoldedInputDelay(uop.prop.instr, self.uArchConfig)
          if r > opReadyCycle:
             opReadyCycle = r
 
