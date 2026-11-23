@@ -462,6 +462,7 @@ class FrontEnd:
       self.instructions = instructions
       self.opCacheRound = deque() # remaining instruction instances of the current round (see MicroArchConfig.opCacheEntryOps)
       self.opCacheRnd = 0
+      self.afterMicrocode = False # the next op-cache entry is the first after a microcoded instruction (see MicroArchConfig.microcodeNextEntryOps)
       self.microcodeBusyCycles = 0 # cycles in which the microcode sequencer still delivers an instruction (see MicroArchConfig.microcodeOps)
       self.preDecoder = PreDecoder(self.instructionQueue, self.uArchConfig)
       self.decoder = Decoder(self.instructionQueue, self.MS, self.uArchConfig)
@@ -536,6 +537,10 @@ class FrontEnd:
             nOps = 0
             nFields = 0
             entryWindow = None
+            entryOps = self.uArchConfig.opCacheEntryOps
+            if self.afterMicrocode:
+               entryOps = self.uArchConfig.microcodeNextEntryOps
+               self.afterMicrocode = False
             while True:
                if not self.opCacheRound:
                   self.opCacheRound = deque(self.newRound())
@@ -545,7 +550,7 @@ class FrontEnd:
                slots = len(instrI.uops) + (1 if 'I64' in instrI.instr.instrStr else 0)
                window = (instrI.address + len(instrI.instr.opcode) // 2 - 1) // 64
                fields = instrI.instr.opCacheFields
-               if (entryWindow is not None) and ((nOps + slots > self.uArchConfig.opCacheEntryOps) or (window != entryWindow)
+               if (entryWindow is not None) and ((nOps + slots > entryOps) or (window != entryWindow)
                                                  or (self.uArchConfig.opCacheEntryFields and (nFields + fields > self.opCacheFieldCapacity(nOps + slots)))):
                   break
                if entryWindow is None:
@@ -561,6 +566,7 @@ class FrontEnd:
                if self.uArchConfig.microcodeOps and (len(instrI.uops) > self.uArchConfig.microcodeOps):
                   # a microcoded instruction ends the entry; the microcode sequencer delivers its macro-ops (microcodeWidth per cycle)
                   self.microcodeBusyCycles = -(-len(instrI.uops) // self.uArchConfig.microcodeWidth) - 1
+                  self.afterMicrocode = bool(self.uArchConfig.microcodeNextEntryOps)
                   break
                if not self.opCacheRound:
                   break # the entry ends at the end of the loop

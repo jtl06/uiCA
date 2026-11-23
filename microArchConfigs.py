@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, foldedShiftDelay=0, loadOpForwardDelay=None):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -78,6 +78,8 @@ class MicroArchConfig:
       # op-cache entry, and no other instruction is delivered until the microcode sequencer has delivered its macro-ops, microcodeWidth per cycle
       self.microcodeOps = microcodeOps
       self.microcodeWidth = microcodeWidth
+      # AMD: if > 0, the first op-cache entry after a microcoded instruction holds at most this many macro-ops
+      self.microcodeNextEntryOps = microcodeNextEntryOps
       # renameImmediateFolding: additional latency for a shift or rotate (also SHLX, SHRX, SARX, RORX) that reads a register whose value was
       # computed by the renamer (e.g., the result of 'add rax, 1')
       self.foldedShiftDelay = foldedShiftDelay
@@ -319,6 +321,7 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # Not explained: 'vmpsadbw xmm3, xmm5, xmm9, 1' (4 macro-ops) with 6 integer instructions takes 3.00 cycles (predicted 2.00).
    microcodeOps = 2,
    microcodeWidth = 4,
+   microcodeNextEntryOps = 4,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
