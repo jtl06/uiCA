@@ -8,7 +8,7 @@ Like related tools, it assumes that all memory accesses result in cache hits.
 
 Details on uiCA's pipeline model, as well as a comparison with similar tools, can be found in our paper [uiCA: Accurate Throughput Prediction of Basic Blocks on Recent Intel Microarchitectures](https://dl.acm.org/doi/pdf/10.1145/3524059.3532396).
 
-**This is a fork** of [andreas-abel/uiCA](https://github.com/andreas-abel/uiCA). It adds experimental models for AMD Zen 3 (`-arch ZEN3`), Alder Lake P-cores (`-arch ADL-P`) and Ice Lake server (`-arch ICX`), validated with perf on real hardware (see `zenbench/`), plus bug fixes that also apply to the original models. [CHANGES.md](CHANGES.md) lists every change, with the fixes that could go upstream first.
+**This is a fork** of [andreas-abel/uiCA](https://github.com/andreas-abel/uiCA). It adds experimental models for AMD Zen 3 (`-arch ZEN3`), Alder Lake P-cores (`-arch ADL-P`) and Ice Lake server (`-arch ICX`), validated with perf on real hardware (see `microbench/`), plus bug fixes that also apply to the original models. [CHANGES.md](CHANGES.md) lists every change, with the fixes that could go upstream first.
 
 ## Web Interface
 

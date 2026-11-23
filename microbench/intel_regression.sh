@@ -1,5 +1,5 @@
 #!/bin/bash
-# prints uiCA throughput for every zenbench loop on every Intel arch
+# prints uiCA throughput for every microbench loop on every Intel arch
 cd "$(dirname "$0")"; V=${PYTHON:-python3}
 for f in out/*.o; do case $f in *.exe.o) continue;; esac
   printf "%-22s" "$(basename $f .o)"

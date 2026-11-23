@@ -116,7 +116,7 @@ def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
 
    isRegMove = (('MOV' in instrString) and (not memOps) and (macroOps == 1) and (len(nonSuppressedOps) == 2) and latCycles and (max(latCycles) == 0)
                    and all(o.attrib.get('type') == 'reg' for o in nonSuppressedOps))
-   # Memory renaming, measured on a Ryzen 7 7735U (zenbench SET=rmw): read-modify-write instructions with a 32- or 64-bit memory operand that
+   # Memory renaming, measured on a Ryzen 7 7735U (microbench SET=rmw): read-modify-write instructions with a 32- or 64-bit memory operand that
    # are not microcoded (e.g., 'add dword ptr [rsi+64], ecx': 1 cycle per iteration; 16- and 8-bit forms and bts: 7 or more cycles), and
    # moves into general-purpose registers (e.g., 'mov [rsi], rax; mov rax, [rsi]; add rax, 1': 1 cycle; a vector store/load pair: 10 cycles;
    # load-op instructions are not renamed: 'mov [rsi], rax; add rax, [rsi]': 8.24 cycles).
@@ -294,7 +294,7 @@ def main():
                   if isAMD and latNode.attrib.get('cycles_is_upper_bound') == '1' and crossesDomains(XMLInstr, latNode):
                      # uops.info measures the latency of moves between general-purpose and vector registers in a chain with a move in the
                      # other direction and attributes almost all of it to this instruction; perf, Ryzen 7 7735U: 'vmovq xmm0, rax;
-                     # vmovq rax, xmm0': 6 cycles per iteration, upper bounds 5 + 5 (zenbench SET=v2g: all round trips are 4 cycles shorter)
+                     # vmovq rax, xmm0': 6 cycles per iteration, upper bounds 5 + 5 (microbench SET=v2g: all round trips are 4 cycles shorter)
                      latData[(startOp, targetOp)] = max(1, latData[(startOp, targetOp)] - AMD_CROSS_DOMAIN_BOUND_CORRECTION)
                if 'cycles_same_reg' in latNode.attrib:
                   latDataSameReg[(startOp, targetOp)] = int(latNode.attrib['cycles_same_reg'])

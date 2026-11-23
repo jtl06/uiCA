@@ -1,4 +1,4 @@
-# cycles per iteration (perf, 50M iterations) of the loops of zenbench/renaming_test.sh, 2026-11-22
+# cycles per iteration (perf, 50M iterations) of the loops of microbench/renaming_test.sh, 2026-11-22
 # Ryzen 7 7735U (Zen 3+, aethia, cpu 2), Core i7-12650H (P-core, alcidae, cpu 4), Xeon Gold 6314U (Ice Lake-SP, diomedea, cpu 20)
 loop             ZEN3  ADL-P    ICX  body
 A32from64        1.00   7.34   7.50  "mov eax, [rsp+8]" "add rax, 1" "mov [rsp+8], eax"

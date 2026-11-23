@@ -46,14 +46,14 @@ Fork-only fix: `917878c` crash (KeyError) with `renameImmediateFolding` and move
 
 L1-resident data only; no cache misses or branch mispredictions.
 
-## 3. Validation harness (`zenbench/`)
+## 3. Validation harness (`microbench/`)
 
-- `zenbench/fuzz/`: random-loop generator, perf measurement, scoring (`fuzz_report.py`), held-out sets.
-- `zenbench/real/`: loops from BHive basic blocks (`bhive_gen.py`, `real_measure.py`).
-- Microbenchmarks for individual rules (`renaming_test.sh`, `zero_idiom_test.sh`, ...), measurements in `zenbench/measurements/`.
+- `microbench/fuzz/`: random-loop generator, perf measurement, scoring (`fuzz_report.py`), held-out sets.
+- `microbench/real/`: loops from BHive basic blocks (`bhive_gen.py`, `real_measure.py`).
+- Microbenchmarks for individual rules (`renaming_test.sh`, `zero_idiom_test.sh`, ...), measurements in `microbench/measurements/`.
 - `intel_regression.sh`: checks that the stock Intel models are unchanged.
 - `71b229b` removed three one-off experiment scripts.
 
 ## 4. How to check that a change does not alter predictions
 
-The speed changes were checked by comparing the complete detailed output, the JSON output and the HTML trace of the old and new code on 329 files (random loops, BHive blocks, all zenbench microbenchmarks) × all 21 configurations, and by checking that results are the same for different `PYTHONHASHSEED` values. `-graph` and `-depGraph` were not compared (they need plotly and pydot).
+The speed changes were checked by comparing the complete detailed output, the JSON output and the HTML trace of the old and new code on 329 files (random loops, BHive blocks, all microbench microbenchmarks) × all 21 configurations, and by checking that results are the same for different `PYTHONHASHSEED` values. `-graph` and `-depGraph` were not compared (they need plotly and pydot).

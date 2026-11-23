@@ -1,4 +1,4 @@
-# zenbench/zero_idiom_test.sh, cycles per iteration (perf), 2026-11-22
+# microbench/zero_idiom_test.sh, cycles per iteration (perf), 2026-11-22
 # Xeon Gold 6314U (Ice Lake-SP, diomedea, cpu 20): a vector integer instruction that reads a register zeroed by an idiom (vpxor/vpsubd x,x,x)
 # or a register in its initial state (never written since the process started) has a latency of 4 instead of 1 on the path through its other
 # input. A zero loaded from memory does not have this effect, nor does a GPR zero idiom; throughput is not affected. The first run after the

@@ -297,13 +297,13 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # perf, Ryzen 7 7735U: 8 nops + dec/jnz (9 macro-ops): 2 cycles per iteration (dispatch width alone: 1.5); 10 nops: 2; 12: 2.17; 14: 2.5.
    # An entry does not span a 64-byte boundary, and a 64-bit immediate uses two slots (4 x 'mov r64, imm64' + dec/jnz: 2 cycles; 7 (70 bytes): 3)
    opCacheEntryOps = 8,
-   # perf, Ryzen 7 7735U (zenbench SET=opc): immediate and displacement fields (8 or 32 bits, integer or vector instructions) also limit an
+   # perf, Ryzen 7 7735U (microbench SET=opc): immediate and displacement fields (8 or 32 bits, integer or vector instructions) also limit an
    # entry: with 8 macro-ops at most 3 (two loads with displacements and one immediate: 1.34 cycles per iteration; two immediates: 2.00), each
    # unused op slot holds two more, and at most 5 in total (7 ops and 5 fields: 1.28; 6 ops and 6 fields: 2.00); the size of the fields and of
    # the instructions does not matter
    opCacheEntryFields = 3,
    opCacheMaxFields = 5,
-   sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (zenbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
+   sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
    storeDataPorts = 'stx',
@@ -331,7 +331,7 @@ MicroArchConfigs['ADL-P'].RBWidth = 512
 MicroArchConfigs['ADL-P'].RSWidth = 205 # unverified
 MicroArchConfigs['ADL-P'].retireWidth = 8
 MicroArchConfigs['ADL-P'].moveEliminationGPRSlots = 'unlimited'
-# LSD: measured on a Core i7-12650H with perf (zenbench/lsd_experiment.py): loops of nops with up to 35 uops are delivered by the LSD, and
+# LSD: measured on a Core i7-12650H with perf (microbench/lsd_experiment.py): loops of nops with up to 35 uops are delivered by the LSD, and
 # their cycle counts are explained by these unroll counts (for loops with fewer than 7 uops, the count cannot be determined this way).
 MicroArchConfigs['ADL-P'].LSDEnabled = True
 MicroArchConfigs['ADL-P'].LSDUnrolling = dict([(n, 6) for n in range(1, 7)] + [(7, 9), (8, 9)] + [(n, 5) for n in range(9, 19)] + [(n, 3) for n in range(19, 33)] + [(n, 2) for n in range(33, 36)])
@@ -340,14 +340,14 @@ MicroArchConfigs['ADL-P'].fusiblePorts = '237A'
 MicroArchConfigs['ADL-P'].portAssignment = 'ICL'
 MicroArchConfigs['ADL-P'].renameImmediateFolding = True
 # perf, Core i7-12650H: the (macro-fused) branch at the end of a loop is always executed on port 6, while branches that are not taken
-# also use port 0 (e.g., zenbench loops imul_indep3 and test_jcc3)
+# also use port 0 (e.g., microbench loops imul_indep3 and test_jcc3)
 MicroArchConfigs['ADL-P'].takenBranchPort = '6'
-# perf, Core i7-12650H (zenbench/smallloop_experiment.py, measurements/adl-p_i7-12650H/perf_loads.json): three loads per cycle only if they
+# perf, Core i7-12650H (microbench/smallloop_experiment.py, measurements/adl-p_i7-12650H/perf_loads.json): three loads per cycle only if they
 # access at most two cache lines, e.g., [rsi], [rsi+8], [rsi+64]: 1 cycle; [rsi], [rsi+64], [rsi+128] or three loads from [rsi]: 1.5 cycles.
 # Loops with fewer than 7 uops: their cycle counts (e.g., 5 uops: 1.25-1.32 cycles) are explained if the LSD unrolls them (here: 6 times), so
 # that uops of different iterations are issued in the same cycle.
 MicroArchConfigs['ADL-P'].loadLineSlots = 2
-# perf, Core i7-12650H (zenbench SET=rmw): e.g., 'add dword ptr [rsi+64], 3' and 'add byte ptr [rsi+64], 3' run at 1 cycle per iteration, while the
+# perf, Core i7-12650H (microbench SET=rmw): e.g., 'add dword ptr [rsi+64], 3' and 'add byte ptr [rsi+64], 3' run at 1 cycle per iteration, while the
 # forms with a register source and the 16-bit forms take more than 7 cycles. This agrees with the memory-to-memory latencies measured by
 # uops.info (1 vs. 6 or more cycles).
 # perf, Core i7-12650H: a read-modify-write instruction that is not memory-renamed and whose operation is a single uop (e.g.,
@@ -356,7 +356,7 @@ MicroArchConfigs['ADL-P'].loadLineSlots = 2
 MicroArchConfigs['ADL-P'].simpleRMWForwardDelay = 1
 MicroArchConfigs['ADL-P'].memoryRenaming = 'latency' # and loads into general-purpose registers, see instructions.py
 # perf, Core i7-12650H (store-reload chains such as 'mov eax, [rsp+8]; add eax, 1; mov [rsp+8], eax', 1 cycle per iteration; found with real-code
-# blocks from BHive, zenbench/real): not renamed (6.7-7.8 cycles) are 16-bit loads, MOVSXD loads, and values of 64-bit operations that the renamer
+# blocks from BHive, microbench/real): not renamed (6.7-7.8 cycles) are 16-bit loads, MOVSXD loads, and values of 64-bit operations that the renamer
 # computes (add/sub with immediate, lea) if they are stored with 32 or 8 bits ('mov eax, [rsp+8]; add rax, 1; mov [rsp+8], eax'); 8-bit loads
 # ('movzx eax, byte ptr [rsp+8]; add eax, 1; mov [rsp+8], al') are renamed
 MicroArchConfigs['ADL-P'].memRenamingWidths = (8, 32, 64)
@@ -368,9 +368,9 @@ MicroArchConfigs['ADL-P'].loadValueNumbering = True
 MicroArchConfigs['ADL-P'].experimental = True
 
 # Experimental: Ice Lake server (Sunny Cove). uops.info only has measurements for client Ice Lake, on which move elimination for general-purpose
-# registers is disabled. On a Xeon Gold 6314U, it is enabled (perf, zenbench SET=movs: 'mov r9d, ebx; mov ebx, r9d; or rbx, r8' and the movzx
+# registers is disabled. On a Xeon Gold 6314U, it is enabled (perf, microbench SET=movs: 'mov r9d, ebx; mov ebx, r9d; or rbx, r8' and the movzx
 # variant run at 1.1 cycles per iteration instead of 3). ICX therefore uses the configuration and the instruction data of Rocket Lake (Cypress
-# Cove, a port of Sunny Cove with move elimination): mean error on 92 scalar zenbench loops measured on the Xeon 6.6%, ICL 17.9%.
+# Cove, a port of Sunny Cove with move elimination): mean error on 92 scalar microbench loops measured on the Xeon 6.6%, ICL 17.9%.
 # Timings of vector loops on this Xeon were not reproducible (e.g., a chain of vpaddd: 1 or 4 cycles per iteration in different runs) and were
 # not used.
 MicroArchConfigs['ICX'] = copy.deepcopy(MicroArchConfigs['RKL'])
@@ -380,7 +380,7 @@ MicroArchConfigs['ICX'].dataFrom = 'RKL'
 MicroArchConfigs['ICX'].experimental = True
 # Store-to-load forwarding (no memory renaming on Sunny Cove), perf, Xeon Gold 6314U: its latency depends on when the load executes. Chains
 # through memory take 7.0-7.5 cycles per iteration in short loops ('mov [rsi], rax; mov rax, [rsi]; add rax, 1': 7.48, predicted 6 with the
-# default delay; read-modify-write chains, zenbench SET=rmw2, rmwctx: 7.0-7.5), but often only about 4 in loops with more instructions
+# default delay; read-modify-write chains, microbench SET=rmw2, rmwctx: 7.0-7.5), but often only about 4 in loops with more instructions
 # (random loops, e.g. a store and a 32-bit reload in a chain: 4.06). For read-modify-write instructions the delay is one cycle longer than the
 # default (fits the short loops and most random ones); for other loads the default fits the random loops better (fresh set: 81.6% within 10%
 # vs. 80.9% with 5).
