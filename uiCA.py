@@ -587,18 +587,18 @@ class FrontEnd:
          elif self.uopSource == 'DSB':
             newInstrIUops = self.DSB.cycle()
             newUops = [u for _, u in newInstrIUops if u is not None]
-            curInstrI = None
-            if newUops and newUops[-1].getUnfusedUops()[-1].prop.isLastUopOfInstr:
-               curInstrI = newInstrIUops[-1][0]
-            elif self.MS.isBusy():
-               # the DSB passed the remaining uops of an instruction to the microcode sequencer; the instruction is complete (without
-               # this, the source did not switch to MITE after a microcoded instruction, and the DSB was read when it was empty)
-               curInstrI = self.DSB.MSInstrI
-            if curInstrI is not None:
+            # the check uses the last entry read from the DSB in this cycle (not the last uop: an entry can have no uop of its own, e.g.
+            # a microcoded instruction, whose uops come from the MS, or an instruction without uops)
+            entry = self.DSB.lastEntry
+            if (entry is not None) and ((entry.uop is None) or entry.MSUops or entry.uop.getUnfusedUops()[-1].prop.isLastUopOfInstr):
+               curInstrI = entry.instrI
                if curInstrI.instr.isLastDecodedInstr():
                   nextAddr = self.alignmentOffset
                else:
                   nextAddr = curInstrI.address + (len(curInstrI.instr.opcode) // 2)
+                  if curInstrI.instr.macroFusedWithNextInstr:
+                     # the branch that is fused with this instruction has no entry of its own
+                     nextAddr += len(self.instructions[self.instructions.index(curInstrI.instr) + 1].opcode) // 2
                if nextAddr not in self.addressesInDSB:
                   self.uopSource = 'MITE'
 
@@ -706,11 +706,12 @@ class DSB:
       self.MS = MS
       self.DSBBlockQueue = deque()
       self.uArchConfig = uArchConfig
-      self.MSInstrI = None # the instruction whose uops were last passed to the MS
+      self.lastEntry = None # the last entry read in the current cycle
       self.delayInPrevCycle = False
 
    def cycle(self):
       retList = []
+      self.lastEntry = None
       DSBBlock = self.DSBBlockQueue[0]
       newDSBBlockStarted = (DSBBlock[0].slot == 0)
       secondDSBBlockLoaded = False
@@ -745,10 +746,10 @@ class DSB:
                remainingSlots -= 1
          if entry.MSUops:
             self.MS.addUops(entry.MSUops, 'DSB')
-            self.MSInstrI = entry.instrI
             remainingSlots = 0
 
          DSBBlock.popleft()
+         self.lastEntry = entry
          if not DSBBlock:
             self.DSBBlockQueue.popleft()
             if remainingSlots and self.DSBBlockQueue and (self.uArchConfig.DSBWidth == 6):
