@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, foldedShiftDelay=0):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, foldedShiftDelay=0, loadOpForwardDelay=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -81,6 +81,7 @@ class MicroArchConfig:
       # renameImmediateFolding: additional latency for a shift or rotate (also SHLX, SHRX, SARX, RORX) that reads a register whose value was
       # computed by the renamer (e.g., the result of 'add rax, 1')
       self.foldedShiftDelay = foldedShiftDelay
+      self.loadOpForwardDelay = loadOpForwardDelay # store-forwarding delay for the loads of load-op instructions (None: storeForwardDelay)
       # if set: the number of different cache lines that loads can access per cycle; loads to the same line at different offsets share an access.
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
@@ -412,4 +413,7 @@ MicroArchConfigs['ICX'].experimental = True
 MicroArchConfigs['ICX'].rmwForwardDelayOverride = 5
 # perf, Xeon Gold 6314U: 'mov rax, [rsp+8]; mov [rsp+8], eax' (a load that is wider than the store) takes 19 cycles per iteration
 MicroArchConfigs['ICX'].storeForwardFailDelay = 14
+# perf, Xeon Gold 6314U: a store and a load-op instruction that reads it in a chain ('mov [rsi+7168], rdx; add rdx, [rsi+7168]') take 7.5-8 cycles
+# per iteration in random loops (microbench dev11, found with fuzz/ablate.py; 6 with the default delay); a delay of 5 fits them better than 6
+MicroArchConfigs['ICX'].loadOpForwardDelay = 5
 MicroArchConfigs['ICX'].loadValueNumbering = True

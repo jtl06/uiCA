@@ -1373,6 +1373,8 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
          loadUopProps.append(UopProperties(instr, pc, inputOperands, outputOperands, uopLatencies, isLoadUop=True, memAddr=memAddr))
          loadUopProps[-1].forwardDelay = uArchConfig.storeForwardDelay
          loadUopProps[-1].forwardFailDelay = uArchConfig.storeForwardFailDelay
+         if (uArchConfig.loadOpForwardDelay is not None) and nonMemPcs and (not instr.outputMemOperands):
+            loadUopProps[-1].forwardDelay = uArchConfig.loadOpForwardDelay
          if instr.outputMemOperands:
             loadUopProps[-1].forwardDelay = uArchConfig.rmwForwardDelay
             if (len(nonMemPcs) == 1) and (not instr.memRenaming):
