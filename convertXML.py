@@ -458,9 +458,7 @@ def main():
    allPorts = {}
    ALUPorts = {}
    for arch in instrDataForArch.keys():
-      # with the virtual ports of fused branches (MicroArchConfig.fusedBranchPorts), which no instruction form has
-      allPorts[arch] = sorted({p for pd in perfDataForArch[arch] for pc in pd.get('ports', {}).keys() for p in pc}
-                              | set(MicroArchConfigs[arch].fusedBranchPorts if arch in MicroArchConfigs else ''))
+      allPorts[arch] = sorted({p for pd in perfDataForArch[arch] for pc in pd.get('ports', {}).keys() for p in pc})
       ALUPorts[arch] = sorted(next(iter(perfDataForArch[arch][instrDataForArch[arch]['AND_GPRv_IMMb'][0]['perfData']]['ports'].keys())))
    with open(os.path.join(path, 'uArchInfo.py'), 'w') as f:
       f.write('allPorts = ' + repr(allPorts) + '\n')

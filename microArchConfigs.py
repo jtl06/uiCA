@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, fpSchedulerSize=0, fpSchedulerPorts='', fusedBranchPorts='', splitLoadCycles=0):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -106,8 +106,6 @@ class MicroArchConfig:
       # if > 0: a load that crosses a 64-byte line occupies its load port for this many cycles (only where the addresses of the loop make
       # the crossing knowable, see splitLoadPatterns in instructions.py)
       self.splitLoadCycles = splitLoadCycles
-      # AMD: ports of a macro-fused branch whose first instruction writes no register (CMP, TEST): such a pair needs no integer ALU
-      self.fusedBranchPorts = fusedBranchPorts
       # AMD: if > 0, at most this many uops for the ports fpSchedulerPorts wait in the FP scheduler; younger ones wait in order in the
       # non-scheduling queue (they are not dispatched before they enter the scheduler)
       self.fpSchedulerSize = fpSchedulerSize
@@ -338,10 +336,6 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # 56 FP uops wait in the scheduler, younger ones in the non-scheduling queue
    fpSchedulerSize = 56,
    fpSchedulerPorts = 'klmnop',
-   # perf, Ryzen 7 7735U (microbench lb/r9b.txt): a fused CMP or TEST + Jcc uses no integer ALU (3 x 'add r, 1' + 'inc rax' + 'cmp rcx, rax;
-   # jne': 1.00 cycles per iteration, with 4 adds: 1.25), unlike a fused DEC + Jcc (4 adds + 'dec rcx; jne': 1.25) or an unfused CMP;
-   # virtual ports BR0/BR1 (at most two such branches per cycle)
-   fusedBranchPorts = 'qr',
    # perf, Ryzen 7 7735U (microbench lb/r9a.txt): a 32-byte load that crosses a 64-byte line occupies its load port for 2 cycles (4 such
    # loads per iteration: 3.96 cycles, 8: 7.97; 'vmovups ymm, [rdi+4k]' for k = 0..7 from a pointer that advances by 32, 3.5 crossing
    # loads per iteration: 6.00, predicted 5.78); also 8- and 16-byte loads (6 crossing 8-byte loads: 4.03); the latency is 1 cycle longer
@@ -355,7 +349,7 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    dividerPort = 'a',
    loadLatency = 4, # SOG 19h, 2.12 (integer loads)
    portNames = {'a': 'ALU0', 'b': 'ALU1', 'c': 'ALU2', 'd': 'ALU3', 'g': 'AGU0', 'h': 'AGU1', 'i': 'AGU2', 's': 'SD0', 't': 'SD1',
-                'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt', 'y': '(SA0)', 'z': '(SA1)', 'q': 'BR0', 'r': 'BR1'},
+                'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt', 'y': '(SA0)', 'z': '(SA1)'},
 )
 
 # Experimental: Alder Lake P-cores (Golden Cove). Based on the ICL configuration; apart from the LSD, the front-end parameters and the port
