@@ -315,7 +315,10 @@ class Renamer:
                   if uop.prop.isStoreAddressUop or uop.prop.isStoreDataUop:
                      uop.storeBufferEntry = self.curStoreBufferEntry
                      self.curStoreBufferEntry.uops.append(uop)
-                  if uop.prop.isLoadUop:
+                  # A load uop can have no address: the port data of some instructions without a memory input operand has a load port
+                  # (e.g., PCMPESTRI with register operands on SNB/IVB, OUT, INS). Such a uop reads no store and gets no fast pointer
+                  # chasing (it keeps the defaults of Uop).
+                  if uop.prop.isLoadUop and (uop.prop.memAddr is not None):
                      key = self.getStoreBufferKey(uop.prop.memAddr)
                      baseReg = uop.prop.memAddr.get('base')
                      baseEntry = self.renameDict.get(getCanonicalReg(baseReg)) if baseReg else None
@@ -591,12 +594,18 @@ class FrontEnd:
          elif self.uopSource == 'DSB':
             newInstrIUops = self.DSB.cycle()
             newUops = [u for _, u in newInstrIUops if u is not None]
-            if newUops and newUops[-1].getUnfusedUops()[-1].prop.isLastUopOfInstr:
-               curInstrI = newInstrIUops[-1][0]
+            # the check uses the last entry read from the DSB in this cycle (not the last uop: an entry can have no uop of its own, e.g.
+            # a microcoded instruction, whose uops come from the MS, or an instruction without uops)
+            entry = self.DSB.lastEntry
+            if (entry is not None) and ((entry.uop is None) or entry.MSUops or entry.uop.getUnfusedUops()[-1].prop.isLastUopOfInstr):
+               curInstrI = entry.instrI
                if curInstrI.instr.isLastDecodedInstr():
                   nextAddr = self.alignmentOffset
                else:
                   nextAddr = curInstrI.address + (len(curInstrI.instr.opcode) // 2)
+                  if curInstrI.instr.macroFusedWithNextInstr:
+                     # the branch that is fused with this instruction has no entry of its own
+                     nextAddr += len(self.instructions[self.instructions.index(curInstrI.instr) + 1].opcode) // 2
                if nextAddr not in self.addressesInDSB:
                   self.uopSource = 'MITE'
 
@@ -704,10 +713,12 @@ class DSB:
       self.MS = MS
       self.DSBBlockQueue = deque()
       self.uArchConfig = uArchConfig
+      self.lastEntry = None # the last entry read in the current cycle
       self.delayInPrevCycle = False
 
    def cycle(self):
       retList = []
+      self.lastEntry = None
       DSBBlock = self.DSBBlockQueue[0]
       newDSBBlockStarted = (DSBBlock[0].slot == 0)
       secondDSBBlockLoaded = False
@@ -745,6 +756,7 @@ class DSB:
             remainingSlots = 0
 
          DSBBlock.popleft()
+         self.lastEntry = entry
          if not DSBBlock:
             self.DSBBlockQueue.popleft()
             if remainingSlots and self.DSBBlockQueue and (self.uArchConfig.DSBWidth == 6):
@@ -1006,7 +1018,9 @@ class Scheduler:
          uop9 = self.readyQueue['9'][0][1]
          addr4 = uop4.storeBufferEntry.abstractAddress
          addr9 = uop9.storeBufferEntry.abstractAddress
-         if addr4 and addr9 and ((addr4[0] != addr9[0]) or (addr4[1] != addr9[1]) or (addr4[2] != addr9[2]) or (abs(addr4[3]-addr9[3]) >= 64)):
+         # (an address without a displacement, e.g. the stack slot of PUSH m, has the displacement None: 0)
+         if addr4 and addr9 and ((addr4[0] != addr9[0]) or (addr4[1] != addr9[1]) or (addr4[2] != addr9[2])
+                                 or (abs((addr4[3] or 0) - (addr9[3] or 0)) >= 64)):
             if uop4.idx <= uop9.idx:
                applicablePorts.remove('9')
             else:
@@ -2066,7 +2080,9 @@ def generateJSONOutput(filename, instructions: List[Instr], frontEnd: FrontEnd, 
                if (uop.dispatched is not None) and (uop.dispatched <= maxCycle):
                   cycles[uop.dispatched].setdefault('dispatched', {})['Port' + uop.actualPort] = unfusedUopDict
                if (uop.executed is not None) and (uop.executed <= maxCycle):
-                  cycles[uop.executed].setdefault('executed', []).append(unfusedUopDict)
+                  # executed is a float if the instruction has a fractional throughput limit (instr.TP, see processPendingUops); the
+                  # event goes to the cycle in which it lies
+                  cycles[int(uop.executed)].setdefault('executed', []).append(unfusedUopDict)
 
    import json
    jsonStr = json.dumps({'parameters': parameters, 'instructions': instrList, 'cycles': cycles}, sort_keys=True)
@@ -2083,6 +2099,11 @@ def getURL(instrStr):
 
 
 # Returns the throughput
+class InputError(Exception):
+   # an input (code or options) that cannot be analyzed; the message says why
+   pass
+
+
 def runSimulation(*args, **kwargs):
    # Each simulation starts from the same state, as in a fresh process (so that results do not depend on earlier simulations in the same
    # process, e.g., with -arch all or when uiCA is used as a library). The cyclic garbage collector is paused during the simulation: it
@@ -2145,6 +2166,9 @@ def _runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPol
    lastApplicableInstr = next(instr for instr in instructions if instr.isLastDecodedInstr()) # ignore macro-fused instr.
    lastRelevantRound = max(0, len(uopsForRound) - 2) # last round may be incomplete, thus -2
    firstRelevantRound = min(lastRelevantRound, len(uopsForRound) // 2)
+   if (not uopsForRound) or (not uopsForRound[firstRelevantRound][lastApplicableInstr]):
+      # only possible with minIterations < 1: the simulation stopped before the first iteration was complete
+      raise InputError('no iteration was completed (minIterations must be at least 1, or minCycles larger)')
    if lastRelevantRound - firstRelevantRound > 10:
       for rnd in range(lastRelevantRound, lastRelevantRound - 5, -1):
          if uopsForRound[firstRelevantRound][lastApplicableInstr][-1].retireIdx == uopsForRound[rnd][lastApplicableInstr][-1].retireIdx:

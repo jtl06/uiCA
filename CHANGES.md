@@ -17,6 +17,10 @@ These change or fix behavior of the stock Intel models, or of uiCA in general, a
 | **Install prerequisites.** Building the XED module needs the Python headers and setuptools (not bundled with Python ≥ 3.12); the README did not list them, and `setup.sh` failed in the middle of the build. README updated; `setup.sh` checks first and prints the package names. | `b765ee2` | — |
 | **Speed.** The cyclic garbage collector is paused during a simulation; `__slots__` for the uop and instruction-instance classes; per-instruction precomputation of rename keys and uop grouping; memoized helpers. `runSimulation` also starts from a fresh state (random seed, uop counter), so library use gives the same results as the CLI. | `49c6b2a` | Same output. CLI, 1000 instructions: 386 → 291 ms; 3000: 1265 → 866 ms; small blocks: 102 → 91 ms (mostly Python startup). Many simulations in one process: 1.6× faster. |
 | **Generalized port parameters.** The simulator's hard-coded Intel port numbers (load, store-address, store-data, micro-fusion and divider ports, load latency) are `MicroArchConfig` parameters, with the previous values as defaults. | `c0e0acd` | Refactor; output unchanged. Needed for non-Intel models. |
+| **Crash: load uop without an address.** Some instructions without a memory input operand have a load port in their port data (PCMPESTRI/VPCMPESTRM with register operands on SNB/IVB, OUT, INS); `Renamer.cycle` failed with `AttributeError: 'NoneType' object has no attribute 'get'`. Such a load uop now reads no store and gets no fast pointer chasing. | `ebc6e47` | These inputs get a result; other output unchanged. |
+| **Crash: DSB-to-MITE switch.** The front end checked whether the next instruction is in the DSB only when the DSB delivered the last uop of an instruction, so it stayed on the DSB after a microcoded instruction, an instruction without uops or a macro-fused pair whose successor is not in the DSB; it then delivered the next round's block too early and failed with `IndexError: deque index out of range` in `DSB.cycle`. The check now uses the last DSB entry read in the cycle and skips a fused branch. | `19ba4f3`, `e9b7a70` | These inputs get a result; other output unchanged. |
+| **Crash: paired stores without a displacement.** `dispatchUops` computed `None - None` for two stores without a displacement (e.g. two `push qword ptr [rax]`) at the heads of the port-4 and port-9 queues (ICL, TGL, RKL). A missing displacement is now 0. | `1a3e7bf` | These inputs get a result; other output unchanged. |
+| **`InputError`.** With `-minIterations` < 1 the simulation could stop before the first iteration was complete, and the throughput computation failed with `IndexError`. `runSimulation` now raises `InputError` (a new exception class for inputs that cannot be analyzed) with a message that says why. | `8360f1b` | — |
 
 Cleanup: `86de104` removes unused helpers from `x64_lib.py` (`regTo32/16/8`, `regToSize`, `getRegForMemPrefix`, `getSizeOfMemPrefix`, `getMemAddr`, `Low8Regs`, `STATUSFLAGS*`).
 
@@ -34,7 +38,13 @@ Not included in `-arch all`; selected with `-arch ZEN3`, `-arch ADL-P`, `-arch I
 
 New `MicroArchConfig` parameters (defaults keep the stock models unchanged): `isAMD`, `experimental`, `portNames`, `portAssignment`, `loadPorts`, `storeAddrPorts`, `storeDataPorts`, `vectorStoreDataPorts`, `fusiblePorts`, `dividerPort`, `loadLatency`, `takenBranchPort`, `loadLineSlots`, `storeLineRestrictedPorts`, `memoryRenaming`, `memRenamingWidths`, `memRenamingExcluded`, `memRenamingFoldedCheck`, `loadValueNumbering`, `storeForwardDelay`, `storeForwardFailDelay`, `rmwForwardDelayOverride`, `simpleRMWForwardDelay`, `narrowStorePenalty`, `sameRegMoveEliminated`, `renameImmediateFolding`, `opCacheEntryOps`, `opCacheEntryFields`, `opCacheMaxFields`, `dataFrom`.
 
-Fork-only fix: `917878c` crash (KeyError) with `renameImmediateFolding` and move elimination.
+Fork-only fixes: `917878c` crash (KeyError) with `renameImmediateFolding` and move elimination; `4351920` crash (TypeError) while
+writing the `-json` output for an instruction with a fractional throughput limit (the `executed` event goes to the cycle in which it
+lies).
+
+The crash fixes were found with the fixtures and the fuzzer of [wuica](https://github.com/jtl06/wuica) (a port of this fork); its
+`docs/DEVIATIONS.md` lists every difference from upstream that changes a result or an error. With these fixes, every fixture case
+that did not fail before is byte-identical.
 
 ### Accuracy (share of loops predicted within 10% of measured; data not used for tuning)
 
