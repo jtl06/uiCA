@@ -273,6 +273,12 @@ def main():
                   if (archNode.attrib['name'] not in ['ICL', 'TGL', 'RKL', 'ADL-P']) and (XMLInstr.attrib['category'] == 'COND_BR') and (ports == '1*p06'):
                      ports = '1*p6' # taken branches can only use port 6
                   perfData['ports'+iSuffix] = {p.replace('p', ''): int(n) for np in ports.split('+') for n, p in [np.split('*')]}
+                  if ((iSuffix == '_I') and (archNode.attrib['name'] == 'ADL-P') and perfData.get('ports')
+                        and (sum(perfData['ports_I'].values()) < sum(perfData['ports'].values()))):
+                     # uops.info's port counts for indexed memory operands on Alder Lake-P lack the non-memory uops of about 3200 instruction
+                     # forms (e.g., VADDPD (XMM, XMM, M128): uops_indexed="2", ports_indexed="1*p23A"; ADD (R64, M64): 1*p23A); the ports of
+                     # the non-indexed form are used instead
+                     perfData['ports_I'] = perfData['ports']
                elif perfData.get('uops'+iSuffix, -1) == 0:
                   perfData['ports'+iSuffix] = {}
 
