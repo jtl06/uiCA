@@ -1011,7 +1011,9 @@ class Scheduler:
          uop9 = self.readyQueue['9'][0][1]
          addr4 = uop4.storeBufferEntry.abstractAddress
          addr9 = uop9.storeBufferEntry.abstractAddress
-         if addr4 and addr9 and ((addr4[0] != addr9[0]) or (addr4[1] != addr9[1]) or (addr4[2] != addr9[2]) or (abs(addr4[3]-addr9[3]) >= 64)):
+         # (an address without a displacement, e.g. the stack slot of PUSH m, has the displacement None: 0)
+         if addr4 and addr9 and ((addr4[0] != addr9[0]) or (addr4[1] != addr9[1]) or (addr4[2] != addr9[2])
+                                 or (abs((addr4[3] or 0) - (addr9[3] or 0)) >= 64)):
             if uop4.idx <= uop9.idx:
                applicablePorts.remove('9')
             else:
