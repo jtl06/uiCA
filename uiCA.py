@@ -446,6 +446,7 @@ class FrontEnd:
       self.instructions = instructions
       self.opCacheRound = deque() # remaining instruction instances of the current round (see MicroArchConfig.opCacheEntryOps)
       self.opCacheRnd = 0
+      self.microcodeBusyCycles = 0 # cycles in which the microcode sequencer still delivers an instruction (see MicroArchConfig.microcodeOps)
       self.preDecoder = PreDecoder(self.instructionQueue, self.uArchConfig)
       self.decoder = Decoder(self.instructionQueue, self.MS, self.uArchConfig)
 
@@ -511,7 +512,9 @@ class FrontEnd:
          self.perfEvents.setdefault(clock, {})['IDQFull'] = 1
          return
 
-      if (self.uopSource is None) and self.uArchConfig.opCacheEntryOps:
+      if (self.uopSource is None) and self.uArchConfig.opCacheEntryOps and self.microcodeBusyCycles:
+         self.microcodeBusyCycles -= 1
+      elif (self.uopSource is None) and self.uArchConfig.opCacheEntryOps:
          # one op cache entry per cycle (see MicroArchConfig.opCacheEntryOps); an instruction's macro-ops are not split between entries
          if len(self.IDQ) + self.uArchConfig.opCacheEntryOps <= self.uArchConfig.IDQWidth:
             nOps = 0
@@ -539,6 +542,10 @@ class FrontEnd:
                   lamUop.addedToIDQ = clock
                nOps += slots
                nFields += fields
+               if self.uArchConfig.microcodeOps and (len(instrI.uops) > self.uArchConfig.microcodeOps):
+                  # a microcoded instruction ends the entry; the microcode sequencer delivers its macro-ops (microcodeWidth per cycle)
+                  self.microcodeBusyCycles = -(-len(instrI.uops) // self.uArchConfig.microcodeWidth) - 1
+                  break
                if not self.opCacheRound:
                   break # the entry ends at the end of the loop
       elif self.uopSource is None:

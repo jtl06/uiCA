@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -74,6 +74,10 @@ class MicroArchConfig:
       # a MOV load from an (abstract) address that was not written since the last MOV load or store there yields the same value (e.g., the
       # pointer in 'mov rdi, [r12]; add qword ptr [rdi], 1' is the same in every iteration, so that the add forms a chain through memory)
       self.loadValueNumbering = loadValueNumbering
+      # AMD (op cache, see opCacheEntryOps): if > 0, an instruction with more than this many macro-ops is microcoded: it ends the current
+      # op-cache entry, and no other instruction is delivered until the microcode sequencer has delivered its macro-ops, microcodeWidth per cycle
+      self.microcodeOps = microcodeOps
+      self.microcodeWidth = microcodeWidth
       # if set: the number of different cache lines that loads can access per cycle; loads to the same line at different offsets share an access.
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
       # cache line at a different offset (see instructions.py).
@@ -303,6 +307,13 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # the instructions does not matter
    opCacheEntryFields = 3,
    opCacheMaxFields = 5,
+   # Instructions with more than two macro-ops are microcoded. uops.info's throughput of such instructions is
+   # ceil(macro-ops / 4) + 1 (VMPSADBW (YMM, YMM, YMM, I8), 3 macro-ops: 2; CMPXCHG (R64, R64), 5: 3; PCMPESTRM (XMM, XMM, I8), 7: 3;
+   # PCMPESTRM (XMM, M128, I8), 12: 4), and random loops with one of them take that many cycles plus the op-cache entries of the other
+   # instructions (perf, Ryzen 7 7735U, microbench dev9: 'vmpsadbw xmm3, xmm5, xmm9, 1' + 6 integer instructions: 3.00 cycles per iteration,
+   # predicted 2; 'pcmpestrm xmm6, [rsi+800], 7' + 6: 5.01, predicted 4): they do not share the front end with other instructions
+   microcodeOps = 2,
+   microcodeWidth = 4,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
