@@ -1007,7 +1007,7 @@ class Scheduler:
 
 
    def processPendingUops(self):
-      for uop in list(self.pendingUops):
+      for uop in sorted(self.pendingUops, key=lambda u: u.idx): # program order (iterating over the set itself would make the result depend on memory addresses)
          finishTime = uop.dispatched + 2
          if uop.prop.isFirstUopOfInstr and (uop.prop.instr.TP is not None):
             finishTime = max(finishTime, uop.dispatched + uop.prop.instr.TP)
