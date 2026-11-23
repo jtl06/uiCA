@@ -2,6 +2,7 @@
 """Measure the loops made by fuzz_gen.py with perf (standard library only; copy it to the machine together with the executables).
 
 For each loop: a short smoke run (must exit normally), then REPS full runs; cycles and instructions per iteration are recorded.
+Loops already in OUT_JSON are skipped (the measurement can be stopped and resumed).
 Usage: fuzz_measure.py CPU METADATA_JSON EXE_DIR OUT_JSON [REPS]
 """
 import json, os, subprocess, sys
@@ -12,8 +13,9 @@ def main():
    hybrid = os.path.exists('/sys/devices/cpu_core')
    events = 'cpu_core/cycles/u,cpu_core/instructions/u' if hybrid else 'cycles:u,instructions:u'
    n = float(meta['iterations'])
-   res = {}
+   res = json.load(open(outFile)) if os.path.exists(outFile) else {}
    for i, loop in enumerate(meta['loops']):
+      if loop['name'] in res: continue
       p = os.path.join(exeDir, loop['name'])
       try:
          r = subprocess.run(['taskset', '-c', cpu, p + '.smoke.exe'], timeout=10)

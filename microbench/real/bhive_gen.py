@@ -24,6 +24,7 @@ Blocks that change RSP by a constant in every iteration (function prologues and 
 (e.g., a store to a new cache line), which never happens in the programs they come from.
 
 Retag an existing set (after changing the rules): bhive_gen.py -retag META_JSON
+A new set that must not share blocks with earlier sets: EXCLUDE=META_JSON[,META_JSON...] (blocks of these sets are skipped).
 
 Usage: bhive_gen.py BHIVE_DIR SEED PER_GROUP OUT_DIR META_JSON [ARCH ...]
 """
@@ -191,11 +192,13 @@ def main():
       p = line.strip().split(',')
       if len(p) == 2: cats[p[0].lower()] = p[1]
 
+   exclude = set(l['code'] for f in os.environ.get('EXCLUDE', '').split(',') if f for l in json.load(open(f))['loops'])
    rnd = random.Random(seed)
    os.makedirs(outDir, exist_ok=True)
    loops = []; stats = collections.Counter(); reasons = collections.Counter()
    for gname, codes in sorted(groups(bhive).items()):
       codes = sorted(codes); rnd.shuffle(codes)
+      codes = [c for c in codes if c not in exclude]
       taken = 0
       for code in codes:
          if taken >= perGroup: break
