@@ -587,8 +587,14 @@ class FrontEnd:
          elif self.uopSource == 'DSB':
             newInstrIUops = self.DSB.cycle()
             newUops = [u for _, u in newInstrIUops if u is not None]
+            curInstrI = None
             if newUops and newUops[-1].getUnfusedUops()[-1].prop.isLastUopOfInstr:
                curInstrI = newInstrIUops[-1][0]
+            elif self.MS.isBusy():
+               # the DSB passed the remaining uops of an instruction to the microcode sequencer; the instruction is complete (without
+               # this, the source did not switch to MITE after a microcoded instruction, and the DSB was read when it was empty)
+               curInstrI = self.DSB.MSInstrI
+            if curInstrI is not None:
                if curInstrI.instr.isLastDecodedInstr():
                   nextAddr = self.alignmentOffset
                else:
@@ -700,6 +706,7 @@ class DSB:
       self.MS = MS
       self.DSBBlockQueue = deque()
       self.uArchConfig = uArchConfig
+      self.MSInstrI = None # the instruction whose uops were last passed to the MS
       self.delayInPrevCycle = False
 
    def cycle(self):
@@ -738,6 +745,7 @@ class DSB:
                remainingSlots -= 1
          if entry.MSUops:
             self.MS.addUops(entry.MSUops, 'DSB')
+            self.MSInstrI = entry.instrI
             remainingSlots = 0
 
          DSBBlock.popleft()
