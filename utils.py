@@ -1,5 +1,6 @@
 import re
 from collections import namedtuple
+from functools import lru_cache
 from itertools import count
 from typing import Dict, Optional
 
@@ -7,6 +8,15 @@ from microArchConfigs import MicroArchConfig
 from instructions import Instr
 from x64_lib import *
 
+
+@lru_cache(maxsize=None)
+def movWidth(instrStr, pattern):
+   # width of a same-size MOV between a register and memory ('MOV (M64, R64)' etc.); None otherwise
+   m = re.match(pattern, instrStr)
+   return int(m.group(1)) if (m and m.group(1) == m.group(2)) else None
+
+MOV_STORE = r'MOV \(M(32|64), R(32|64)\)'
+MOV_LOAD = r'MOV \(R(32|64), M(32|64)\)'
 
 AbstractValue = namedtuple('AbstractValue', ['base', 'offset'])
 class AbstractValueGenerator:
@@ -43,9 +53,9 @@ class AbstractValueGenerator:
       # called for each store (in program order); key: as returned by getAddressKey
       if not self.loadValueNumbering:
          return
-      m = re.match(r'MOV \(M(32|64), R(32|64)\)', instr.instrStr)
-      if m and m.group(1) == m.group(2) and instr.inputRegOperands:
-         self.memValueDict[key] = (int(m.group(1)), self.getAbstractValueForReg(instr.inputRegOperands[0].reg))
+      width = movWidth(instr.instrStr, MOV_STORE)
+      if width and instr.inputRegOperands:
+         self.memValueDict[key] = (width, self.getAbstractValueForReg(instr.inputRegOperands[0].reg))
       else:
          self.memValueDict.pop(key, None)
 
@@ -61,10 +71,9 @@ class AbstractValueGenerator:
 
    def __computeAbstractValue(self, instr: Instr):
       if self.loadValueNumbering and instr.inputMemOperands and (not instr.outputMemOperands):
-         m = re.match(r'MOV \(R(32|64), M(32|64)\)', instr.instrStr)
-         if m and m.group(1) == m.group(2):
+         width = movWidth(instr.instrStr, MOV_LOAD)
+         if width:
             key = self.getAddressKey(instr.inputMemOperands[0].memAddr)
-            width = int(m.group(1))
             if self.memValueDict.get(key, (None,))[0] != width:
                self.memValueDict[key] = (width, self.__generateFreshAbstractValue())
             return self.memValueDict[key][1]

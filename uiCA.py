@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import gc
 import importlib
 import os
 import re
@@ -9,6 +10,7 @@ from collections import Counter, deque, namedtuple, OrderedDict
 from concurrent import futures
 from heapq import heappop, heappush
 from itertools import count, repeat
+from operator import attrgetter
 from typing import List, Dict, NamedTuple, Optional
 
 import random
@@ -24,6 +26,9 @@ from utils import *
 from x64_lib import *
 
 class UopProperties:
+   __slots__ = ('instr', 'possiblePorts', 'inputOperands', 'outputOperands', 'latencies', 'divCycles', 'isLoadUop', 'forwardDelay', 'forwardFailDelay',
+                'isStoreAddressUop', 'memAddr', 'isStoreDataUop', 'isFirstUopOfInstr', 'isLastUopOfInstr', 'isRegMergeUop', 'renameKeys')
+
    def __init__(self, instr, possiblePorts, inputOperands, outputOperands, latencies, divCycles=0, isLoadUop=False, isStoreAddressUop=False, memAddr=None,
                 isStoreDataUop=False, isFirstUopOfInstr=False, isLastUopOfInstr=False, isRegMergeUop=False):
       self.instr = instr
@@ -41,11 +46,16 @@ class UopProperties:
       self.isFirstUopOfInstr = isFirstUopOfInstr
       self.isLastUopOfInstr = isLastUopOfInstr
       self.isRegMergeUop = isRegMergeUop
+      self.renameKeys = None # set by the renamer
 
    def __str__(self):
       return 'UopProperties(ports: {}, in: {}, out: {}, lat: {})'.format(self.possiblePorts, self.inputOperands, self.outputOperands, self.latencies)
 
+# The classes for uops and instruction instances use __slots__: there are many of them (all are kept until the end of the simulation),
+# and objects without a __dict__ are smaller and have faster attribute access.
 class Uop:
+   __slots__ = ('idx', 'prop', 'instrI', 'fusedUop', 'actualPort', 'eliminated', 'renamedInputOperands', 'renamedOutputOperands', 'storeBufferEntry',
+                'memRenamingBlocked', 'forwardFails', 'latReducedDueToFastPtrChasing', 'readyForDispatch', 'dispatched', 'executed')
    idx_iter = count()
 
    def __init__(self, prop, instrI):
@@ -73,6 +83,8 @@ class Uop:
 
 
 class FusedUop:
+   __slots__ = ('__uops', 'laminatedUop', 'issued', 'retired', 'retireIdx')
+
    def __init__(self, uops: List[Uop]):
       self.__uops = uops
       for uop in uops:
@@ -87,10 +99,13 @@ class FusedUop:
 
 
 class LaminatedUop:
+   __slots__ = ('__fusedUops', '__unfusedUops', 'addedToIDQ', 'uopSource')
+
    def __init__(self, fusedUops: List[FusedUop]):
       self.__fusedUops = fusedUops
       for fUop in fusedUops:
          fUop.laminatedUop = self
+      self.__unfusedUops = [uop for fusedUop in fusedUops for uop in fusedUop.getUnfusedUops()] # the lists are not changed later
       self.addedToIDQ = None # cycle in which this uop was added to the IDQ
       self.uopSource = None # MITE, DSB, MS, LSD, or SE
 
@@ -98,10 +113,12 @@ class LaminatedUop:
       return self.__fusedUops
 
    def getUnfusedUops(self):
-      return [uop for fusedUop in self.getFusedUops() for uop in fusedUop.getUnfusedUops()]
+      return self.__unfusedUops
 
 
 class StackSyncUop(Uop):
+   __slots__ = ()
+
    def __init__(self, instrI, uArchConfig):
       inOp = RegOperand('RSP')
       outOp = RegOperand('RSP')
@@ -110,6 +127,8 @@ class StackSyncUop(Uop):
 
 
 class StoreBufferEntry:
+   __slots__ = ('abstractAddress', 'uops', 'addressReadyCycle', 'dataReadyCycle', 'width', 'renamable')
+
    def __init__(self, abstractAddress):
       self.abstractAddress = abstractAddress # (base, index, scale, disp)
       self.uops = [] # uops that write to this entry
@@ -119,6 +138,8 @@ class StoreBufferEntry:
       self.renamable = True # see MicroArchConfig.memRenamingWidths
 
 class RenamedOperand:
+   __slots__ = ('nonRenamedOperand', 'uop', '__ready')
+
    def __init__(self, nonRenamedOperand=None, uop=None, ready=None):
       self.nonRenamedOperand = nonRenamedOperand
       self.uop = uop # uop that writes this operand
@@ -311,23 +332,32 @@ class Renamer:
                      if (sbe is not None) and self.uArchConfig.memRenamingWidths:
                         uop.memRenamingBlocked = (not sbe.renamable) or ((memWidth(uop.prop.instr.instrStr) or 0) > (sbe.width or 0))
 
-                  for inpOp in uop.prop.inputOperands:
-                     if isinstance(inpOp, PseudoOperand):
+                  prop = uop.prop
+                  if prop.renameKeys is None:
+                     # computed once per UopProperties (the operand lists do not change during the simulation)
+                     prop.renameKeys = ([(op, isinstance(op, PseudoOperand), self.getRenameDictKey(op)) for op in prop.inputOperands],
+                                        [(op, isinstance(op, PseudoOperand), self.getRenameDictKey(op), isinstance(op, RegOperand))
+                                         for op in prop.outputOperands])
+                  inKeys, outKeys = prop.renameKeys
+                  renameDict = self.renameDict
+                  for inpOp, isPseudo, key in inKeys:
+                     if isPseudo:
                         renOp = self.curInstrPseudoOpDict[inpOp]
                      else:
-                        key = self.getRenameDictKey(inpOp)
-                        renOp = self.renameDict.setdefault(key, RenameDictEntry(RenamedOperand(ready=-1), False)).renamedOp
+                        entry = renameDict.get(key)
+                        if entry is None:
+                           entry = renameDict[key] = RenameDictEntry(RenamedOperand(ready=-1), False)
+                        renOp = entry.renamedOp
                      uop.renamedInputOperands.append(renOp)
-                  for outOp in uop.prop.outputOperands:
+                  for outOp, isPseudo, key, isReg in outKeys:
                      renOp = RenamedOperand(outOp, uop)
                      uop.renamedOutputOperands.append(renOp)
-                     if isinstance(outOp, PseudoOperand):
+                     if isPseudo:
                         self.curInstrPseudoOpDict[outOp] = renOp
                      else:
-                        key = self.getRenameDictKey(outOp)
                         self.curInstrRndRenameDict[key] = RenameDictEntry(renOp, False)
-                        if isinstance(outOp, RegOperand):
-                           self.absValGen.setAbstractValueForCurInstr(key, uop.prop.instr)
+                        if isReg:
+                           self.absValGen.setAbstractValueForCurInstr(key, prop.instr)
                else:
                   # e.g., xor rax, rax
                   for op in uop.prop.instr.outputRegOperands:
@@ -938,6 +968,8 @@ class Scheduler:
       self.blockedResources = dict() # for how many remaining cycle a resource will be blocked
       self.blockedResources['div'] = 0
       self.dependentUops = dict() # uops that have an operand that is written by a non-executed uop
+      self.allPortsList = list(allPorts[self.uArchConfig.name])
+      self.hasPorts4And9 = ('4' in self.allPortsList) and ('9' in self.allPortsList)
 
    def isFull(self):
       return len(self.uops) + self.uArchConfig.issueWidth > self.uArchConfig.RSWidth
@@ -959,9 +991,9 @@ class Scheduler:
       self.updateBlockedResources()
 
    def dispatchUops(self, clock):
-      applicablePorts = list(allPorts[self.uArchConfig.name])
+      applicablePorts = self.allPortsList[:]
 
-      if ('4' in applicablePorts) and ('9' in applicablePorts) and self.readyQueue['4'] and self.readyQueue['9']:
+      if self.hasPorts4And9 and self.readyQueue['4'] and self.readyQueue['9']:
          # two stores can be executed in the same cycle if they access the same cache line; see 'Paired Stores' in the optimization manual
          uop4 = self.readyQueue['4'][0][1]
          uop9 = self.readyQueue['9'][0][1]
@@ -1007,7 +1039,7 @@ class Scheduler:
 
 
    def processPendingUops(self):
-      for uop in sorted(self.pendingUops, key=lambda u: u.idx): # program order (iterating over the set itself would make the result depend on memory addresses)
+      for uop in sorted(self.pendingUops, key=attrgetter('idx')): # program order (iterating over the set itself would make the result depend on memory addresses)
          finishTime = uop.dispatched + 2
          if uop.prop.isFirstUopOfInstr and (uop.prop.instr.TP is not None):
             finishTime = max(finishTime, uop.dispatched + uop.prop.instr.TP)
@@ -1205,9 +1237,11 @@ class Scheduler:
    def getReadyForDispatchCycle(self, clock, uop):
       opReadyCycle = -1
       for renInpOp in uop.renamedInputOperands:
-         if renInpOp.getReadyCycle() is None:
+         r = renInpOp.getReadyCycle()
+         if r is None:
             return None
-         opReadyCycle = max(opReadyCycle, renInpOp.getReadyCycle())
+         if r > opReadyCycle:
+            opReadyCycle = r
 
       readyCycle = opReadyCycle
       if opReadyCycle < uop.fusedUop.issued + self.uArchConfig.issueDispatchDelay:
@@ -1409,6 +1443,7 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
 
 
 class InstrInstance:
+   __slots__ = ('instr', 'address', 'rnd', 'uops', 'regMergeUops', 'stackSyncUops', 'source', 'predecoded', 'removedFromIQ')
    uArchConfig: Optional[MicroArchConfig] = None # set by runSimulation
 
    def __init__(self, instr, address, rnd):
@@ -1423,34 +1458,42 @@ class InstrInstance:
       self.removedFromIQ = None # cycle in which the instruction instance was removed from the IQ
 
    def __generateUops(self):
-      if not self.instr.UopPropertiesList:
+      instr = self.instr
+      if not instr.UopPropertiesList:
          return []
+      if instr.uopGrouping is None:
+         instr.uopGrouping = computeUopGrouping(instr, self.uArchConfig)
+      uops = [Uop(prop, self) for prop in instr.UopPropertiesList]
+      return [LaminatedUop([FusedUop([uops[i] for i in fusedGroup]) for fusedGroup in lamGroup]) for lamGroup in instr.uopGrouping]
 
-      unfusedDomainUops = deque([Uop(prop, self) for prop in self.instr.UopPropertiesList])
 
-      fusedDomainUops = deque()
-      for i in range(0, self.instr.retireSlots-1):
-         uop = unfusedDomainUops.popleft()
-         if (uop.prop.possiblePorts and any(p in self.uArchConfig.fusiblePorts for p in uop.prop.possiblePorts)
-               and len(unfusedDomainUops) >= self.instr.retireSlots - i):
-            fusedDomainUops.append(FusedUop([uop, unfusedDomainUops.popleft()]))
-         else:
-            fusedDomainUops.append(FusedUop([uop]))
-      fusedDomainUops.append(FusedUop(list(unfusedDomainUops))) # add remaining uops
+# How the (unfused-domain) uops of an instruction are combined into fused-domain and laminated-domain uops; the same for each instance
+# of the instruction. Returns a list (laminated-domain uops) of lists (fused-domain uops) of lists of indices into instr.UopPropertiesList.
+def computeUopGrouping(instr, uArchConfig: MicroArchConfig):
+   props = instr.UopPropertiesList
+   def isFusible(prop):
+      return prop.possiblePorts and any(p in uArchConfig.fusiblePorts for p in prop.possiblePorts)
 
-      laminatedDomainUops = []
-      nLaminatedDomainUops = min(self.instr.uopsMITE + self.instr.uopsMS, len(fusedDomainUops))
-      for i in range(0, nLaminatedDomainUops - 1):
-         fusedUop = fusedDomainUops.popleft()
-         if ((len(fusedUop.getUnfusedUops()) == 1) and fusedUop.getUnfusedUops()[0].prop.possiblePorts
-               and any(p in self.uArchConfig.fusiblePorts for p in fusedUop.getUnfusedUops()[0].prop.possiblePorts)
-               and len(fusedDomainUops) >= nLaminatedDomainUops - i):
-            laminatedDomainUops.append(LaminatedUop([fusedUop, fusedDomainUops.popleft()]))
-         else:
-            laminatedDomainUops.append(LaminatedUop([fusedUop]))
-      laminatedDomainUops.append(LaminatedUop(list(fusedDomainUops))) # add remaining uops
+   unfusedDomainUops = deque(range(len(props)))
+   fusedDomainUops = deque()
+   for i in range(0, instr.retireSlots-1):
+      uop = unfusedDomainUops.popleft()
+      if isFusible(props[uop]) and len(unfusedDomainUops) >= instr.retireSlots - i:
+         fusedDomainUops.append([uop, unfusedDomainUops.popleft()])
+      else:
+         fusedDomainUops.append([uop])
+   fusedDomainUops.append(list(unfusedDomainUops)) # add remaining uops
 
-      return laminatedDomainUops
+   laminatedDomainUops = []
+   nLaminatedDomainUops = min(instr.uopsMITE + instr.uopsMS, len(fusedDomainUops))
+   for i in range(0, nLaminatedDomainUops - 1):
+      fusedUop = fusedDomainUops.popleft()
+      if (len(fusedUop) == 1) and isFusible(props[fusedUop[0]]) and len(fusedDomainUops) >= nLaminatedDomainUops - i:
+         laminatedDomainUops.append([fusedUop, fusedDomainUops.popleft()])
+      else:
+         laminatedDomainUops.append([fusedUop])
+   laminatedDomainUops.append(list(fusedDomainUops)) # add remaining uops
+   return laminatedDomainUops
 
 
 def split64ByteBlockTo16ByteBlocks(cacheBlock):
@@ -2033,8 +2076,23 @@ def getURL(instrStr):
 
 
 # Returns the throughput
-def runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPolicy, noMicroFusion, noMacroFusion, simpleFrontEnd, minIterations, minCycles,
-                  printDetails=False, traceFile=None, graphFile=None, depGraphFile=None, jsonFile=None):
+def runSimulation(*args, **kwargs):
+   # Each simulation starts from the same state, as in a fresh process (so that results do not depend on earlier simulations in the same
+   # process, e.g., with -arch all or when uiCA is used as a library). The cyclic garbage collector is paused during the simulation: it
+   # creates many objects that stay alive until the end, and repeatedly scanning them took about 30% of the time for large blocks.
+   random.seed(0)
+   Uop.idx_iter = count()
+   gcWasEnabled = gc.isenabled()
+   gc.disable()
+   try:
+      return _runSimulation(*args, **kwargs)
+   finally:
+      if gcWasEnabled:
+         gc.enable()
+
+
+def _runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPolicy, noMicroFusion, noMacroFusion, simpleFrontEnd, minIterations, minCycles,
+                   printDetails=False, traceFile=None, graphFile=None, depGraphFile=None, jsonFile=None):
    instructions = getInstructions(disas, uArchConfig, importlib.import_module('instrData.'+uArchConfig.name+'_data'),
                                   alignmentOffset, noMicroFusion, noMacroFusion)
    if not instructions:

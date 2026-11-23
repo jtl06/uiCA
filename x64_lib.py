@@ -1,4 +1,5 @@
 import re
+from functools import lru_cache
 
 GPRegs = {'AH', 'AL', 'AX', 'BH', 'BL', 'BP', 'BPL', 'BX', 'CH', 'CL', 'CX', 'DH', 'DI', 'DIL', 'DL', 'DX', 'EAX',
    'EBP', 'EBX', 'ECX', 'EDI', 'EDX', 'ESI', 'ESP', 'R10', 'R10B', 'R10D', 'R10W', 'R11', 'R11B', 'R11D', 'R11W', 'R12',
@@ -8,6 +9,7 @@ GPRegs = {'AH', 'AL', 'AX', 'BH', 'BL', 'BP', 'BPL', 'BX', 'CH', 'CL', 'CX', 'DH
 
 High8Regs = {'AH', 'BH', 'CH', 'DH'}
 
+@lru_cache(maxsize=None)
 def regTo64(reg):
    if 'AX' in reg or 'AH' in reg or 'AL' in reg: return 'RAX'
    if 'BX' in reg or 'BH' in reg or 'BL' in reg: return 'RBX'
@@ -27,6 +29,7 @@ def regTo64(reg):
    if '15' in reg: return 'R15'
 
 # Returns for a GPR the corresponding 64-bit registers, and for a (X|Y|Z)MM register the corresponding XMM register
+@lru_cache(maxsize=None)
 def getCanonicalReg(reg):
    if reg in GPRegs:
       return regTo64(reg)
@@ -35,6 +38,7 @@ def getCanonicalReg(reg):
    else:
       return reg
 
+@lru_cache(maxsize=None)
 def getRegSize(reg):
    if reg[-1] == 'L' or reg[-1] == 'H' or reg[-1] == 'B': return 8
    elif reg[-1] == 'W' or reg in ['AX', 'BX', 'CX', 'DX', 'SP', 'BP', 'SI', 'DI']: return 16

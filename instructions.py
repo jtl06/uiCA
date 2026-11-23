@@ -1,10 +1,12 @@
 import re
+from functools import lru_cache
 from typing import List
 
 import xed
 from microArchConfigs import MicroArchConfig
 from x64_lib import *
 
+@lru_cache(maxsize=None)
 def memWidth(instrStr):
    # width (in bits) of the memory operand of an instruction, from its uops.info string (e.g., 'MOVZX (R32, M8)'); None if it has none
    if instrStr.startswith(('PUSH', 'POP')): return 64
@@ -13,6 +15,7 @@ def memWidth(instrStr):
 
 class Instr:
    opCacheFields = 0 # number of immediate and displacement fields (see MicroArchConfig.opCacheEntryFields)
+   uopGrouping = None # set by the simulator (see computeUopGrouping in uiCA.py)
    def __init__(self, asm, opcode, posNominalOpcode, instrStr, portData, uops, retireSlots, uopsMITE, uopsMS, divCycles, inputRegOperands, inputFlagOperands,
                 inputMemOperands, outputRegOperands, outputFlagOperands, outputMemOperands, memAddrOperands, agenOperands, latencies, TP, immediate,
                 lcpStall, implicitRSPChange, mayBeEliminated, complexDecoder, nAvailableSimpleDecoders, hasLockPrefix, isBranchInstr, isSerializingInstr,
