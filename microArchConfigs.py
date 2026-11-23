@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, fusedBranchPorts='', splitLoadCycles=0):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, fpSchedulerSize=0, fpSchedulerPorts='', fusedBranchPorts='', splitLoadCycles=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -108,6 +108,10 @@ class MicroArchConfig:
       self.splitLoadCycles = splitLoadCycles
       # AMD: ports of a macro-fused branch whose first instruction writes no register (CMP, TEST): such a pair needs no integer ALU
       self.fusedBranchPorts = fusedBranchPorts
+      # AMD: if > 0, at most this many uops for the ports fpSchedulerPorts wait in the FP scheduler; younger ones wait in order in the
+      # non-scheduling queue (they are not dispatched before they enter the scheduler)
+      self.fpSchedulerSize = fpSchedulerSize
+      self.fpSchedulerPorts = fpSchedulerPorts
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property
@@ -329,6 +333,11 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    microcodeOps = 2,
    microcodeWidth = 4,
    microcodeNextEntryOps = 4,
+   # perf, Ryzen 7 7735U (microbench lb/r9b.txt): a chain of K FMAs per iteration (independent iterations) takes 4.05, 5.07, 6.48, 10.09
+   # and 18.86 cycles per iteration for K = 8, 10, 12, 16, 24 (latency 4, two FMA pipes: K/2 without a limit on the uops that wait): about
+   # 56 FP uops wait in the scheduler, younger ones in the non-scheduling queue
+   fpSchedulerSize = 56,
+   fpSchedulerPorts = 'klmnop',
    # perf, Ryzen 7 7735U (microbench lb/r9b.txt): a fused CMP or TEST + Jcc uses no integer ALU (3 x 'add r, 1' + 'inc rax' + 'cmp rcx, rax;
    # jne': 1.00 cycles per iteration, with 4 adds: 1.25), unlike a fused DEC + Jcc (4 adds + 'dec rcx; jne': 1.25) or an unfused CMP;
    # virtual ports BR0/BR1 (at most two such branches per cycle)

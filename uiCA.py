@@ -1000,6 +1000,8 @@ class Scheduler:
       self.uopsReadyInCycle = {}
       self.nonReadyUops = [] # uops not yet added to uopsReadyInCycle (in order)
       self.pendingUops = set() # dispatched, but not finished uops
+      self.nFPUopsInScheduler = 0 # see MicroArchConfig.fpSchedulerSize
+      self.fpNonSchedulingQueue = deque()
       self.pendingStoreFenceUops = deque()
       self.storeUopsSinceLastStoreFence = []
       self.pendingLoadFenceUops = deque()
@@ -1024,6 +1026,9 @@ class Scheduler:
 
       self.addNewUops(clock, newUops)
       self.dispatchUops(clock)
+      while self.fpNonSchedulingQueue and (self.nFPUopsInScheduler < self.uArchConfig.fpSchedulerSize):
+         self.nFPUopsInScheduler += 1
+         self.checkDependingUopsExecuted(self.fpNonSchedulingQueue.popleft())
       self.processPendingUops()
       self.processNonReadyUops(clock)
       self.processPendingFences(clock)
@@ -1067,6 +1072,8 @@ class Scheduler:
 
          uop.dispatched = clock
          self.uops.remove(uop)
+         if self.uArchConfig.fpSchedulerSize and (port in self.uArchConfig.fpSchedulerPorts):
+            self.nFPUopsInScheduler -= 1
          uopsDispatched.append(uop)
          self.pendingUops.add(uop)
 
@@ -1261,7 +1268,14 @@ class Scheduler:
             self.portUsage[port] += 1
             self.uops.add(uop)
 
-            self.checkDependingUopsExecuted(uop)
+            if self.uArchConfig.fpSchedulerSize and (port in self.uArchConfig.fpSchedulerPorts):
+               if self.fpNonSchedulingQueue or (self.nFPUopsInScheduler >= self.uArchConfig.fpSchedulerSize):
+                  self.fpNonSchedulingQueue.append(uop)
+               else:
+                  self.nFPUopsInScheduler += 1
+                  self.checkDependingUopsExecuted(uop)
+            else:
+               self.checkDependingUopsExecuted(uop)
 
             if uop.prop.isFirstUopOfInstr:
                if uop.prop.instr.isStoreSerializing:
