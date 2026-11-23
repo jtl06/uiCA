@@ -449,6 +449,8 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
             elif uArchConfig.isAMD:
                # the fused uop is executed by a branch unit
                prevInstr.portData = dict(prevInstr.portData)
+               if uArchConfig.fusedBranchPorts and not any(getCanonicalReg(op.reg) in GPRegs for op in prevInstr.outputRegOperands):
+                  instrPorts = uArchConfig.fusedBranchPorts
                for p, u in list(prevInstr.portData.items()):
                   if not any((port in uArchConfig.loadPorts + uArchConfig.storeDataPorts) for port in p):
                      del prevInstr.portData[p]
