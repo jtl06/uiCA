@@ -101,6 +101,47 @@ class PseudoOperand:
       pass
 
 
+def affineDelta(instr, reg):
+   # the constant that the instruction adds to the 32- or 64-bit register reg (canonical name), or None if it changes it otherwise
+   mnemonic = instr.instrStr.split(' ')[0]
+   if not any(getCanonicalReg(op.reg) == reg and getRegSize(op.reg) in (32, 64) for op in instr.outputRegOperands):
+      return None
+   if mnemonic in ('ADD', 'SUB') and (instr.immediate is not None) and instr.inputRegOperands \
+         and getCanonicalReg(instr.inputRegOperands[0].reg) == reg and not instr.inputMemOperands:
+      return instr.immediate if mnemonic == 'ADD' else -instr.immediate
+   if mnemonic in ('INC', 'DEC') and not instr.inputMemOperands and not instr.outputMemOperands:
+      return 1 if mnemonic == 'INC' else -1
+   return None
+
+def registerVersions(instructions):
+   # The values of the general-purpose registers in one iteration, relative to their values at its start, as (version, offset): adding an
+   # immediate (ADD, SUB, INC, DEC) changes the offset, any other write gives a new version (an unknown value). Returns the state before each
+   # instruction (dicts: canonical register -> (version, offset); missing: (0, 0)) and the state at the end of the iteration.
+   state = {}
+   before = []
+   nVersions = 0
+   for instr in instructions:
+      before.append(dict(state))
+      for op in instr.outputRegOperands:
+         reg = getCanonicalReg(op.reg)
+         if reg not in GPRegs:
+            continue
+         v, o = state.get(reg, (0, 0))
+         d = affineDelta(instr, reg)
+         if d is not None:
+            state[reg] = (v, o + d)
+         else:
+            nVersions += 1
+            state[reg] = (nVersions, 0)
+   return before, state
+
+def addressLineKey(memAddr, regState):
+   # (registers with their versions, scale, cache line of the offset) of an address, given the register state before the instruction
+   base, index, scale = memAddr.get('base'), memAddr.get('index'), memAddr.get('scale')
+   vb, ob = regState.get(getCanonicalReg(base), (0, 0)) if base else (None, 0)
+   vi, oi = regState.get(getCanonicalReg(index), (0, 0)) if index else (None, 0)
+   return (base and getCanonicalReg(base), vb, index and getCanonicalReg(index), vi, scale, (ob + (scale or 0) * oi + (memAddr.get('disp') or 0)) // 64)
+
 def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffset, noMicroFusion=False, noMacroFusion=False):
    instructions: List[Instr] = []
    zmmRegistersInUse = any(('ZMM' in reg) for instrD in disas for reg in instrD['regOperands'].values())
@@ -420,10 +461,12 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                newPc = ''.join(p for p in pc if p not in restrictedPorts)
                instr.portData[newPc] = instr.portData.get(newPc, 0) + n
 
+   regBefore = None
    if uArchConfig.storeLineRestrictedPorts:
-      def storeLine(memAddr):
-         return (memAddr.get('base'), memAddr.get('index'), memAddr.get('scale'), (memAddr.get('disp') or 0) // 64)
-      stores = [(instr, storeLine(memOp.memAddr)) for instr in instructions for memOp in instr.outputMemOperands]
+      # two stores of an iteration write the same line if their address registers hold the same values (register versions, see
+      # registerVersions; e.g., 'inc [rsp+rdx*4]' twice with 'movzx edx, al' between them: different lines)
+      regBefore, _ = registerVersions(instructions)
+      stores = [(instr, addressLineKey(memOp.memAddr, regBefore[i])) for i, instr in enumerate(instructions) for memOp in instr.outputMemOperands]
       for instr, line in stores:
          if any((l == line) for i2, l in stores if i2 is not instr):
             continue
