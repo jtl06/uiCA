@@ -51,6 +51,10 @@ amdStats = defaultdict(lambda: defaultdict(int))
 amdTPMismatches = defaultdict(list)
 
 AMD_CROSS_DOMAIN_BOUND_CORRECTION = 2
+# perf, Ryzen 7 7735U (microbench SET=v2g): a move from a vector to a general-purpose register (vmovq, vmovmskpd, vpextrd, vcvttsd2si) next to
+# k independent 'add r64, 1' takes about (k + 5) / 4 cycles per iteration for k >= 2, as if it used four integer-ALU slots; modeled as additional
+# uops for the ALUs (random loops, microbench dev11/dev9/fresh: 1, 2, 3, 4 additional uops; 3 fits best)
+AMD_V2G_ALU_UOPS = 3
 
 def crossesDomains(XMLInstr, latNode):
    # whether the latency is between a general-purpose and a vector register
@@ -120,6 +124,10 @@ def getAMDPerfData(arch, XMLInstr, measurementNode, loadLatency):
    for pc in loadPcs + storeAddrPcs + ([AMD_FP_STORE_DATA if (fpStore or usesVecRegs) else AMD_STORE_DATA] * nStore) + aluPcs + fpPcs:
       portData[pc] = portData.get(pc, 0) + 1
 
+   vecIn = any(('MM' in (o.text or '')) and o.attrib.get('r') == '1' for o in regOps)
+   gprOut = any(('MM' not in (o.text or '')) and o.attrib.get('w') == '1' and o.attrib.get('suppressed', '0') != '1' for o in regOps)
+   if vecIn and gprOut and not memW:
+      portData[AMD_ALU] = portData.get(AMD_ALU, 0) + AMD_V2G_ALU_UOPS
    perfData = {'uops': sum(portData.values()), 'retSlots': macroOps, 'uopsMITE': macroOps, 'uopsMS': 0, 'ports': portData}
 
    isRegMove = (('MOV' in instrString) and (not memOps) and (macroOps == 1) and (len(nonSuppressedOps) == 2) and latCycles and (max(latCycles) == 0)
