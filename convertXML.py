@@ -19,6 +19,14 @@ allXmlAttributes = ['agen', 'bcast', 'eosz', 'high8', 'immzero', 'mask', 'rep', 
 # macro-ops. We therefore synthesize the uops: load/store uops are derived from the operands, FP uops are taken from uops.info, and the
 # remaining uops are assigned to a group of ALUs according to the tables below. The tables follow LLVM's X86ScheduleZnver3.td, which is based on
 # AMD's Software Optimization Guide for Family 19h (section 2.10.2).
+# Latency corrections for configurations that use another microarchitecture's data (MicroArchConfig.dataFrom): iclass -> cycles added to
+# every latency of the instruction. ICX (RKL data), perf, Xeon Gold 6314U, chains of one instruction (microbench/mb/vecchain.txt):
+# HADDPS/HADDPD/HSUBPS/HSUBPD (also VEX, 128 and 256 bits) 7 cycles (RKL data: 6), DPPS/VDPPS 16 (14), DPPD 9 -> 10
+DATA_FROM_LATENCY_CORRECTIONS = {
+   'ICX': {'HADDPS': 1, 'HADDPD': 1, 'HSUBPS': 1, 'HSUBPD': 1, 'VHADDPS': 1, 'VHADDPD': 1, 'VHSUBPS': 1, 'VHSUBPD': 1,
+           'DPPS': 2, 'VDPPS': 2, 'DPPD': 1, 'VDPPD': 1},
+}
+
 AMD_ALU = 'abcd'       # ALU0-3
 AMD_AGU = 'ghi'        # AGU0-2
 AMD_VEC_LOAD_AGU = 'gh' # only two vector loads can be executed per cycle (e.g., uops.info: MOVAPD (XMM, M128) has a throughput of 0.5)
@@ -350,9 +358,29 @@ def main():
    for name, cfg in MicroArchConfigs.items():
       if cfg.dataFrom and (cfg.dataFrom in instrDataForArch):
          # e.g., ICX uses the data of RKL
-         shutil.copyfile(os.path.join(path, cfg.dataFrom + '_data.py'), os.path.join(path, name + '_data.py'))
-         instrDataForArch[name] = instrDataForArch[cfg.dataFrom]
-         perfDataForArch[name] = perfDataForArch[cfg.dataFrom]
+         corrections = DATA_FROM_LATENCY_CORRECTIONS.get(name)
+         if not corrections:
+            shutil.copyfile(os.path.join(path, cfg.dataFrom + '_data.py'), os.path.join(path, name + '_data.py'))
+            instrDataForArch[name] = instrDataForArch[cfg.dataFrom]
+            perfDataForArch[name] = perfDataForArch[cfg.dataFrom]
+            continue
+         instrDataForArch[name] = {iform: [dict(d) for d in l] for iform, l in instrDataForArch[cfg.dataFrom].items()}
+         perfDataForArch[name] = list(perfDataForArch[cfg.dataFrom])
+         for iform, l in instrDataForArch[name].items():
+            delta = corrections.get(iform.split('_')[0])
+            if not delta: continue
+            for d in l:
+               pd = dict(perfDataForArch[name][d['perfData']])
+               for key in ['lat', 'lat_SR']:
+                  if key in pd:
+                     pd[key] = {k: v + delta for k, v in pd[key].items()}
+               d['perfData'] = len(perfDataForArch[name])
+               perfDataForArch[name].append(pd)
+         attrDataForArch[name] = attrDataForArch[cfg.dataFrom]
+         with open(os.path.join(path, name + '_data.py'), 'w') as f:
+            f.write('instrData = ' + repr(instrDataForArch[name]) + '\n')
+            f.write('perfData = ' + repr(perfDataForArch[name]) + '\n')
+            f.write('attrData = ' + repr(attrDataForArch[name]) + '\n')
 
    allPorts = {}
    ALUPorts = {}
