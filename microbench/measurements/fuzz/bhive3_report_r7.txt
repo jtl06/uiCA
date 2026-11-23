@@ -1,0 +1,78 @@
+== ZEN3: 2500 loops generated, 1931 compared; excluded: {'unstable measurement': 42, 'run failed': 198, 'stack-drift': 322, 'instruction count differs': 7}
+   uiCA ZEN3             1931 loops: mean   4.0%, median   0.1%, within 10%:  88.8%, too fast/too slow by >10%:  8.1% /  3.1%
+   llvm-mca znver3       1931 loops: mean  11.5%, median   0.5%, within 10%:  70.6%, too fast/too slow by >10%:  8.2% / 21.2%
+   by tag (uiCA ZEN3 | llvm-mca znver3):
+      plain (no rmw, not value-dependent)  1931 loops: mean   4.0% |  11.5%   within 10%:  88.8% |  70.6%
+      int                                  1795 loops: mean   3.5% |  11.3%   within 10%:  90.2% |  71.5%
+      sse                                    68 loops: mean  10.8% |  15.2%   within 10%:  75.0% |  51.5%
+      avx                                    68 loops: mean  10.2% |  14.0%   within 10%:  66.2% |  66.2%
+      app:clang                             198 loops: mean   4.8% |  13.7%   within 10%:  86.4% |  63.6%
+      app:eigen                             177 loops: mean   4.1% |  12.2%   within 10%:  89.8% |  67.8%
+      app:embree                            195 loops: mean   3.8% |  12.2%   within 10%:  89.7% |  67.7%
+      app:ffmpeg                            195 loops: mean   4.2% |  12.7%   within 10%:  88.2% |  70.8%
+      app:gzip                              182 loops: mean   4.1% |   8.8%   within 10%:  90.7% |  75.8%
+      app:openblas                          201 loops: mean   6.3% |  11.9%   within 10%:  79.1% |  67.7%
+      app:openssl                           186 loops: mean   3.3% |   8.1%   within 10%:  90.3% |  76.3%
+      app:redis                             195 loops: mean   4.3% |  14.3%   within 10%:  90.3% |  71.8%
+      app:sqlite                            204 loops: mean   2.8% |  10.7%   within 10%:  91.2% |  69.6%
+      app:tensorflow                        198 loops: mean   2.3% |  10.2%   within 10%:  92.9% |  75.3%
+      cat:?                                   7 loops: mean   3.2% |   7.5%   within 10%:  85.7% |  71.4%
+      cat:Ld                                658 loops: mean   1.8% |   5.5%   within 10%:  93.9% |  80.7%
+      cat:Ld/St                             260 loops: mean   9.7% |  21.2%   within 10%:  73.1% |  43.1%
+      cat:Scalar                            676 loops: mean   2.5% |   8.8%   within 10%:  93.6% |  74.3%
+      cat:Scalar/Vec                         79 loops: mean   4.1% |  18.1%   within 10%:  86.1% |  68.4%
+      cat:St                                236 loops: mean   8.3% |  23.2%   within 10%:  79.7% |  63.1%
+      cat:Vec                                15 loops: mean   6.1% |  11.8%   within 10%:  80.0% |  66.7%
+== ADL-P: 2500 loops generated, 1884 compared; excluded: {'run failed': 198, 'stack-drift': 322, 'unstable measurement': 89, 'instruction count differs': 7}
+   uiCA ADL-P            1884 loops: mean   3.8%, median   0.7%, within 10%:  91.9%, too fast/too slow by >10%:  4.9% /  3.2%
+   stock uiCA RKL        1884 loops: mean  14.6%, median   1.0%, within 10%:  68.9%, too fast/too slow by >10%:  5.9% / 25.2%
+   llvm-mca alderlake    1884 loops: mean  17.9%, median   1.3%, within 10%:  69.0%, too fast/too slow by >10%: 12.4% / 18.6%
+   by tag (uiCA ADL-P | llvm-mca alderlake):
+      plain (no rmw, not value-dependent)  1884 loops: mean   3.8% |  17.9%   within 10%:  91.9% |  69.0%
+      int                                  1751 loops: mean   3.4% |  16.8%   within 10%:  93.0% |  71.4%
+      sse                                    68 loops: mean  10.5% |  30.2%   within 10%:  75.0% |  35.3%
+      avx                                    65 loops: mean   7.6% |  34.4%   within 10%:  80.0% |  38.5%
+      app:clang                             195 loops: mean   5.2% |  17.5%   within 10%:  89.2% |  66.7%
+      app:eigen                             171 loops: mean   3.2% |  18.1%   within 10%:  94.7% |  67.8%
+      app:embree                            186 loops: mean   4.1% |  20.4%   within 10%:  90.3% |  67.7%
+      app:ffmpeg                            194 loops: mean   2.7% |  22.1%   within 10%:  91.8% |  63.4%
+      app:gzip                              174 loops: mean   2.4% |  13.1%   within 10%:  95.4% |  77.6%
+      app:openblas                          193 loops: mean   5.6% |  26.3%   within 10%:  86.0% |  52.3%
+      app:openssl                           177 loops: mean   2.8% |  14.3%   within 10%:  93.2% |  77.4%
+      app:redis                             192 loops: mean   3.4% |  14.1%   within 10%:  93.2% |  75.0%
+      app:sqlite                            207 loops: mean   4.1% |  16.5%   within 10%:  91.8% |  70.0%
+      app:tensorflow                        195 loops: mean   3.7% |  16.0%   within 10%:  93.8% |  73.3%
+      cat:?                                   7 loops: mean   5.4% |   4.3%   within 10%:  85.7% |  85.7%
+      cat:Ld                                662 loops: mean   3.1% |  10.7%   within 10%:  93.1% |  82.9%
+      cat:Ld/St                             251 loops: mean   7.1% |  24.1%   within 10%:  81.7% |  44.6%
+      cat:Scalar                            648 loops: mean   2.4% |  21.5%   within 10%:  97.1% |  68.7%
+      cat:Scalar/Vec                         77 loops: mean   3.1% |  26.7%   within 10%:  92.2% |  61.0%
+      cat:St                                224 loops: mean   6.1% |  19.0%   within 10%:  85.3% |  59.8%
+      cat:Vec                                15 loops: mean   2.5% |  21.0%   within 10%:  86.7% |  46.7%
+== ICL: 2500 loops generated, 1906 compared; excluded: {'run failed': 198, 'stack-drift': 322, 'unstable measurement': 67, 'instruction count differs': 7}
+   uiCA ICX              1906 loops: mean   3.7%, median   0.2%, within 10%:  88.4%, too fast/too slow by >10%:  5.9% /  5.7%
+   uiCA ICL              1906 loops: mean   5.1%, median   0.2%, within 10%:  84.9%, too fast/too slow by >10%:  6.5% /  8.6%
+   stock uiCA ICL        1906 loops: mean   5.6%, median   0.2%, within 10%:  84.4%, too fast/too slow by >10%:  6.7% /  8.9%
+   llvm-mca icelake-server  1906 loops: mean  14.1%, median   0.7%, within 10%:  69.6%, too fast/too slow by >10%: 17.2% / 13.3%
+   by tag (uiCA ICX | llvm-mca icelake-server):
+      plain (no rmw, not value-dependent)  1906 loops: mean   3.7% |  14.1%   within 10%:  88.4% |  69.6%
+      int                                  1772 loops: mean   3.2% |  14.0%   within 10%:  89.4% |  70.5%
+      sse                                    70 loops: mean  12.3% |  14.1%   within 10%:  67.1% |  52.9%
+      avx                                    64 loops: mean   6.0% |  15.6%   within 10%:  84.4% |  60.9%
+      app:clang                             201 loops: mean   4.3% |  17.2%   within 10%:  86.6% |  67.7%
+      app:eigen                             172 loops: mean   3.0% |  11.2%   within 10%:  92.4% |  72.7%
+      app:embree                            189 loops: mean   4.8% |  11.3%   within 10%:  85.2% |  67.2%
+      app:ffmpeg                            195 loops: mean   3.0% |  14.7%   within 10%:  91.3% |  70.3%
+      app:gzip                              177 loops: mean   2.5% |  12.4%   within 10%:  90.4% |  70.1%
+      app:openblas                          194 loops: mean   4.8% |  16.5%   within 10%:  85.1% |  62.9%
+      app:openssl                           181 loops: mean   2.5% |  12.6%   within 10%:  90.6% |  70.2%
+      app:redis                             191 loops: mean   3.9% |  18.6%   within 10%:  89.5% |  64.9%
+      app:sqlite                            205 loops: mean   4.1% |  16.0%   within 10%:  84.9% |  73.7%
+      app:tensorflow                        201 loops: mean   3.4% |   9.4%   within 10%:  89.1% |  76.1%
+      cat:?                                   7 loops: mean   7.2% |   4.2%   within 10%:  71.4% |  71.4%
+      cat:Ld                                671 loops: mean   1.3% |   3.8%   within 10%:  95.1% |  89.4%
+      cat:Ld/St                             260 loops: mean  10.1% |  26.7%   within 10%:  69.6% |  49.2%
+      cat:Scalar                            644 loops: mean   2.5% |  12.4%   within 10%:  91.1% |  61.5%
+      cat:Scalar/Vec                         78 loops: mean   3.6% |  74.0%   within 10%:  91.0% |  64.1%
+      cat:St                                232 loops: mean   6.5% |  14.6%   within 10%:  81.5% |  58.6%
+      cat:Vec                                14 loops: mean   1.5% |   6.8%   within 10%: 100.0% |  78.6%
