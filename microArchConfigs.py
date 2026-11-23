@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, splitLoadCycles=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -103,6 +103,9 @@ class MicroArchConfig:
       self.opCacheMaxFields = opCacheMaxFields
       self.opCacheEntryFields = opCacheEntryFields # if > 0: maximum number of immediate and displacement fields in an op cache entry
       self.dataFrom = dataFrom # use the instruction data of this microarchitecture (convertXML.py copies it)
+      # if > 0: a load that crosses a 64-byte line occupies its load port for this many cycles (only where the addresses of the loop make
+      # the crossing knowable, see splitLoadPatterns in instructions.py)
+      self.splitLoadCycles = splitLoadCycles
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property
@@ -324,6 +327,11 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    microcodeOps = 2,
    microcodeWidth = 4,
    microcodeNextEntryOps = 4,
+   # perf, Ryzen 7 7735U (microbench lb/r9a.txt): a 32-byte load that crosses a 64-byte line occupies its load port for 2 cycles (4 such
+   # loads per iteration: 3.96 cycles, 8: 7.97; 'vmovups ymm, [rdi+4k]' for k = 0..7 from a pointer that advances by 32, 3.5 crossing
+   # loads per iteration: 6.00, predicted 5.78); also 8- and 16-byte loads (6 crossing 8-byte loads: 4.03); the latency is 1 cycle longer
+   # (not modeled). Only crossings that the addresses of the loop make knowable (see splitLoadPatterns in instructions.py).
+   splitLoadCycles = 2,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py

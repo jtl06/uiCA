@@ -59,6 +59,7 @@ class Instr:
       self.foldedInputReg = None # canonical register; see MicroArchConfig.renameImmediateFolding
       self.memRenaming = False # see MicroArchConfig.memoryRenaming
       self.TPKey = instrStr # instructions with the same key share the throughput limit TP
+      self.splitLoadPattern = None # see splitLoadPatterns
       self.UopPropertiesList = [] # list with UopProperties for each (unfused domain) uop
       self.regMergeUopPropertiesList = []
       self.isNextToLastInstr = False
@@ -141,6 +142,39 @@ def addressLineKey(memAddr, regState):
    vb, ob = regState.get(getCanonicalReg(base), (0, 0)) if base else (None, 0)
    vi, oi = regState.get(getCanonicalReg(index), (0, 0)) if index else (None, 0)
    return (base and getCanonicalReg(base), vb, index and getCanonicalReg(index), vi, scale, (ob + (scale or 0) * oi + (memAddr.get('disp') or 0)) // 64)
+
+def splitLoadPatterns(instructions, regBefore, regEnd):
+   # Sets instr.splitLoadPattern (a tuple of bools, one per iteration of a period) for the loads that cross a 64-byte line in some iterations.
+   # Loads are grouped by their address registers; a group's registers must be changed only by adding immediates (registerVersions), which
+   # gives the offset of each load from the group's (unknown) start address and the stride per iteration. The start address is assumed to
+   # have the alignment (mod 64) with the fewest crossing loads, so only crossings that this alignment cannot avoid are modeled (e.g., 32-byte
+   # loads at 4-byte offsets from a pointer that advances by 32: half of them cross a line).
+   from math import gcd
+   groups = {}
+   for i, instr in enumerate(instructions):
+      for memOp in instr.inputMemOperands:
+         m = memOp.memAddr
+         size = (memWidth(instr.instrStr) or 0) // 8
+         if size < 2 or instr.instrStr.startswith(('PUSH', 'POP', 'LEA', 'PREFETCH', 'NOP')):
+            continue
+         regs = []
+         if m.get('base'): regs.append((getCanonicalReg(m['base']), 1))
+         if m.get('index'): regs.append((getCanonicalReg(m['index']), m.get('scale') or 1))
+         if any(r not in GPRegs for r, _ in regs) or any(regBefore[i].get(r, (0, 0))[0] != 0 or regEnd.get(r, (0, 0))[0] != 0 for r, _ in regs):
+            continue
+         offset = (m.get('disp') or 0) + sum(c * regBefore[i].get(r, (0, 0))[1] for r, c in regs)
+         stride = sum(c * regEnd.get(r, (0, 0))[1] for r, c in regs)
+         groups.setdefault(tuple(sorted(regs)), []).append((instr, offset, size, stride))
+   for loads in groups.values():
+      stride = loads[0][3] % 64
+      period = 64 // gcd(stride, 64)
+      def crossings(r):
+         return [tuple((r + off + stride * k) % 64 + size > 64 for k in range(period)) for _, off, size, _ in loads]
+      best = min(range(64), key=lambda r: sum(sum(p) for p in crossings(r)))
+      for (instr, _, _, _), pattern in zip(loads, crossings(best)):
+         if any(pattern):
+            old = instr.splitLoadPattern
+            instr.splitLoadPattern = pattern if old is None else tuple(a or b for a, b in zip(old, pattern))
 
 def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffset, noMicroFusion=False, noMacroFusion=False):
    instructions: List[Instr] = []
@@ -478,6 +512,11 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                del instr.portData[pc]
                newPc = ''.join(p for p in uArchConfig.storeDataPorts if p not in uArchConfig.storeLineRestrictedPorts and p not in uArchConfig.vectorStoreDataPorts)
                instr.portData[newPc] = instr.portData.get(newPc, 0) + n
+
+   if uArchConfig.splitLoadCycles:
+      if regBefore is None:
+         regBefore, _ = registerVersions(instructions)
+      splitLoadPatterns(instructions, regBefore, registerVersions(instructions)[1])
 
    if uArchConfig.narrowStorePenalty:
       def line(memAddr):

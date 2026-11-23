@@ -1071,6 +1071,10 @@ class Scheduler:
          self.pendingUops.add(uop)
 
          self.blockedResources['div'] += uop.prop.divCycles
+         splitPattern = uop.prop.instr.splitLoadPattern
+         if uop.prop.isLoadUop and splitPattern and splitPattern[uop.instrI.rnd % len(splitPattern)]:
+            # a load that crosses a 64-byte line (see MicroArchConfig.splitLoadCycles)
+            self.blockedResources['port' + port] = self.uArchConfig.splitLoadCycles
          if self.uArchConfig.slow256BitMemAcc and (port == '4') and ('M256' in uop.instrI.instr.instrStr):
             self.blockedResources['port' + port] = 2
 
