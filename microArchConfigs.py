@@ -307,11 +307,12 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # the instructions does not matter
    opCacheEntryFields = 3,
    opCacheMaxFields = 5,
-   # Instructions with more than two macro-ops are microcoded. uops.info's throughput of such instructions is
-   # ceil(macro-ops / 4) + 1 (VMPSADBW (YMM, YMM, YMM, I8), 3 macro-ops: 2; CMPXCHG (R64, R64), 5: 3; PCMPESTRM (XMM, XMM, I8), 7: 3;
-   # PCMPESTRM (XMM, M128, I8), 12: 4), and random loops with one of them take that many cycles plus the op-cache entries of the other
-   # instructions (perf, Ryzen 7 7735U, microbench dev9: 'vmpsadbw xmm3, xmm5, xmm9, 1' + 6 integer instructions: 3.00 cycles per iteration,
-   # predicted 2; 'pcmpestrm xmm6, [rsi+800], 7' + 6: 5.01, predicted 4): they do not share the front end with other instructions
+   # Instructions with more than two macro-ops are microcoded. Such an instruction ends its op-cache entry (it may still join the entry
+   # before it), and no other instruction is delivered until the microcode sequencer has delivered its macro-ops, 4 per cycle. Fitted on
+   # random loops (perf, Ryzen 7 7735U, microbench dev9): 'pcmpestri xmm1, [rsi+r14+32], 1' with 7 integer instructions: 5.01 cycles per
+   # iteration (4.00 predicted without this rule, 5.00 with it); 'cmpxchg r9, r8' with 8: 4.00 (3.00 -> 4.00). uops.info's throughput of
+   # such instructions is about ceil(macro-ops / 4) + 1 (CMPXCHG (R64, R64), 5 macro-ops: 3; PCMPESTRM (XMM, M128, I8), 12: 4).
+   # Not explained: 'vmpsadbw xmm3, xmm5, xmm9, 1' (4 macro-ops) with 6 integer instructions takes 3.00 cycles (predicted 2.00).
    microcodeOps = 2,
    microcodeWidth = 4,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
