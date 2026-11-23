@@ -27,6 +27,52 @@ DATA_FROM_LATENCY_CORRECTIONS = {
            'DPPS': 2, 'VDPPS': 2, 'DPPD': 1, 'VDPPD': 1},
 }
 
+# Corrections of single instructions for the experimental configurations: instruction string -> 'TP' (AMD) or 'TP_MS' (Intel, see
+# instructions.py) throughput limit, and/or 'lat': latencies that replace uops.info's. Applied to the data of the configuration, also when it
+# uses another one's data (ICX); found as probe forms that the random loops of the development sets (microbench dev11, dev9, fresh) mispredict
+# in the same direction, and measured as loops of one instruction (microbench mb/instr7.txt, measurements/mb/instr7_*.json).
+INSTR_CORRECTIONS = {
+   # perf, Ryzen 7 7735U (microbench mb/instr7.txt): ROUNDSS/ROUNDSD merge the result into the destination (chain through it: 3 cycles;
+   # uops.info: 0); CVTPI2PD xmm, m64: 3 cycles per instruction
+   'ZEN3': {
+      'ROUNDSS (XMM, XMM, I8)': {'lat': {('REG0', 'REG0'): 3}}, 'ROUNDSD (XMM, XMM, I8)': {'lat': {('REG0', 'REG0'): 3}},
+      'ROUNDSS (XMM, M32, I8)': {'lat': {('REG0', 'REG0'): 3}}, 'ROUNDSD (XMM, M64, I8)': {'lat': {('REG0', 'REG0'): 3}},
+      'VROUNDSS (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}},
+      'VROUNDSS (XMM, XMM, M32, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, M64, I8)': {'lat': {('REG1', 'REG0'): 3}},
+      'CVTPI2PD (XMM, M64)': {'TP': 3.0},
+   },
+   # perf, Core i7-12650H: (V)AESKEYGENASSIST 15 cycles per instruction (uops.info: 13), CMPXCHG8B 13 (11), CMPXCHG16B 16 (13.9); a chain
+   # of SHA256RNDS2 through its destination: 4 cycles (uops.info: 6)
+   'ADL-P': {
+      'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 15}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 15},
+      'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 15}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 15},
+      'CMPXCHG8B (M64)': {'TP_MS': 13}, 'CMPXCHG16B (M128)': {'TP_MS': 16},
+      'SHA256RNDS2 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 4}}, 'SHA256RNDS2 (XMM, M128)': {'lat': {('REG0', 'REG0'): 4}},
+   },
+   # perf, Xeon Gold 6314U (Rocket Lake data): (V)AESKEYGENASSIST 14 (12), CMPXCHG8B 13 (11); chains through the destination: SHA256RNDS2
+   # 4 (6), SHA256MSG1 7 (5; with a memory operand 8)
+   'ICX': {
+      'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
+      'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
+      'CMPXCHG8B (M64)': {'TP_MS': 13},
+      'SHA256RNDS2 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 4}}, 'SHA256RNDS2 (XMM, M128)': {'lat': {('REG0', 'REG0'): 4}},
+      'SHA256MSG1 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 7}}, 'SHA256MSG1 (XMM, M128)': {'lat': {('REG0', 'REG0'): 8}},
+   },
+}
+
+def applyInstrCorrections(arch, instrString, perfData):
+   c = INSTR_CORRECTIONS.get(arch, {}).get(instrString)
+   if not c:
+      return perfData
+   perfData = dict(perfData)
+   for k in ('TP', 'TP_MS'):
+      if k in c:
+         perfData[k] = c[k]
+   if c.get('lat'):
+      perfData['lat'] = dict(perfData.get('lat', {}))
+      perfData['lat'].update(c['lat'])
+   return perfData
+
 AMD_ALU = 'abcd'       # ALU0-3
 AMD_AGU = 'ghi'        # AGU0-2
 AMD_VEC_LOAD_AGU = 'gh' # only two vector loads can be executed per cycle (e.g., uops.info: MOVAPD (XMM, M128) has a throughput of 0.5)
@@ -339,6 +385,7 @@ def main():
             if latDataSameReg:
                perfData['lat_SR'] = latDataSameReg
 
+            perfData = applyInstrCorrections(archNode.attrib['name'], instrString, perfData)
             perfRepr = repr(perfData)
             curPerfDataForArch = perfDataForArch[archNode.attrib['name']]
             curPerfDataForArchIdxDict = perfDataForArchIdxDict[archNode.attrib['name']]
@@ -367,7 +414,7 @@ def main():
       if cfg.dataFrom and (cfg.dataFrom in instrDataForArch):
          # e.g., ICX uses the data of RKL
          corrections = DATA_FROM_LATENCY_CORRECTIONS.get(name)
-         if not corrections:
+         if not corrections and not INSTR_CORRECTIONS.get(name):
             shutil.copyfile(os.path.join(path, cfg.dataFrom + '_data.py'), os.path.join(path, name + '_data.py'))
             instrDataForArch[name] = instrDataForArch[cfg.dataFrom]
             perfDataForArch[name] = perfDataForArch[cfg.dataFrom]
@@ -375,7 +422,12 @@ def main():
          instrDataForArch[name] = {iform: [dict(d) for d in l] for iform, l in instrDataForArch[cfg.dataFrom].items()}
          perfDataForArch[name] = list(perfDataForArch[cfg.dataFrom])
          for iform, l in instrDataForArch[name].items():
-            delta = corrections.get(iform.split('_')[0])
+            for d in l:
+               if d['string'] in INSTR_CORRECTIONS.get(name, {}):
+                  pd = applyInstrCorrections(name, d['string'], perfDataForArch[name][d['perfData']])
+                  d['perfData'] = len(perfDataForArch[name])
+                  perfDataForArch[name].append(pd)
+            delta = (corrections or {}).get(iform.split('_')[0])
             if not delta: continue
             for d in l:
                pd = dict(perfDataForArch[name][d['perfData']])
