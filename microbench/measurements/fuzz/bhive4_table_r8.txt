@@ -1,0 +1,19 @@
+## bhive4 ZEN3, measured on Ryzen 7 7735U (Zen 3+): 1939 loops of 2500 compared; excluded: {'run failed': 200, 'stack-drift': 323, 'unstable measurement': 35, 'instruction count differs': 3}
+   tool                              loops     <=5%    <=10%    <=20%     MAPE
+   uiCA ZEN3 (before)                 1939    86.0%    89.0%    93.7%     3.7%
+   uiCA ZEN3 (after)                  1939    86.0%    89.1%    93.7%     3.7%
+   llvm-mca znver3                    1939    69.8%    72.8%    82.4%    10.8%
+## bhive4 ADL-P, measured on Core i7-12650H P-core (Alder Lake): 1884 loops of 2500 compared; excluded: {'run failed': 200, 'stack-drift': 323, 'unstable measurement': 90, 'instruction count differs': 3}
+   tool                              loops     <=5%    <=10%    <=20%     MAPE
+   uiCA ADL-P (before)                1884    90.5%    93.7%    95.9%     2.9%
+   uiCA ADL-P (after)                 1884    90.5%    93.7%    95.9%     2.9%
+   stock uiCA RKL                     1884    69.2%    71.8%    76.9%    13.2%
+   llvm-mca alderlake                 1884    68.2%    71.5%    77.7%    17.5%
+## bhive4 ICL, measured on Xeon Gold 6314U (Ice Lake-SP): 1895 loops of 2500 compared; excluded: {'run failed': 200, 'stack-drift': 323, 'unstable measurement': 79, 'instruction count differs': 3}
+   tool                              loops     <=5%    <=10%    <=20%     MAPE
+   uiCA ICX (before)                  1895    83.1%    89.8%    96.9%     3.0%
+   uiCA ICX (after)                   1895    83.1%    89.8%    96.9%     3.0%
+   uiCA ICL (before)                  1895    81.0%    87.0%    94.2%     4.3%
+   uiCA ICL (after)                   1895    81.0%    87.0%    94.2%     4.3%
+   stock uiCA ICL                     1895    80.4%    86.4%    93.7%     4.7%
+   llvm-mca icelake-server            1895    69.9%    74.5%    81.4%    10.1%
