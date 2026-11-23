@@ -8,6 +8,8 @@ Like related tools, it assumes that all memory accesses result in cache hits.
 
 Details on uiCA's pipeline model, as well as a comparison with similar tools, can be found in our paper [uiCA: Accurate Throughput Prediction of Basic Blocks on Recent Intel Microarchitectures](https://dl.acm.org/doi/pdf/10.1145/3524059.3532396).
 
+**This is a fork** of [andreas-abel/uiCA](https://github.com/andreas-abel/uiCA). It adds experimental models for AMD Zen 3 (`-arch ZEN3`), Alder Lake P-cores (`-arch ADL-P`) and Ice Lake server (`-arch ICX`), validated with perf on real hardware (see `zenbench/`), plus bug fixes that also apply to the original models. [CHANGES.md](CHANGES.md) lists every change, with the fixes that could go upstream first.
+
 ## Web Interface
 
 An online version of uiCA is available at [uiCA.uops.info](https://uiCA.uops.info).
@@ -25,7 +27,7 @@ An online version of uiCA is available at [uiCA.uops.info](https://uiCA.uops.inf
 
 * Installation:
 
-      git clone https://github.com/andreas-abel/uiCA.git
+      git clone https://github.com/jtl06/uiCA.git
       cd uiCA
       ./setup.sh
 
@@ -45,7 +47,7 @@ An online version of uiCA is available at [uiCA.uops.info](https://uiCA.uops.inf
 
 * Installation:
 
-      git clone https://github.com/andreas-abel/uiCA.git
+      git clone https://github.com/jtl06/uiCA.git
       cd uiCA
       .\setup.cmd
 
@@ -66,7 +68,7 @@ The following parameters are optional. Parameter names may be abbreviated if the
 
 | Option                       | Description |
 |------------------------------|-------------|
-| `-arch`                  | The microarchitecture of the simulated CPU. Available microarchitectures: `SNB`, `IVB`, `HSW`, `BDW`, `SKL`, `SKX`, `KBL`, `CFL`, `CLX`, `ICL`, `TGL`, `RKL`. Alternatively, you can use `all` to get an overview of the throughputs for all supported microarchitectures.  `[Default: all]` |
+| `-arch`                  | The microarchitecture of the simulated CPU. Available microarchitectures: `SNB`, `IVB`, `HSW`, `BDW`, `SKL`, `SKX`, `KBL`, `CFL`, `CLX`, `ICL`, `TGL`, `RKL`, and the experimental `ZEN3`, `ADL-P`, `ICX` (not included in `all`). Alternatively, you can use `all` to get an overview of the throughputs for all supported microarchitectures.  `[Default: all]` |
 | `-iacaMarkers`           | Analyze only the code that is between the `IACA_START` and `IACA_END` markers of Intel's [IACA](https://software.intel.com/content/www/us/en/develop/articles/intel-architecture-code-analyzer.html) tool. |
 | `-raw`                   | Analyze a file that directly contains the machine code of the benchmark, but no headers or other data. |
 | `-trace <filename.html>` | Generate an HTML file that contains a table with a cycle-by-cycle view of how the instructions are executed. |
