@@ -2092,6 +2092,11 @@ def getURL(instrStr):
 
 
 # Returns the throughput
+class InputError(Exception):
+   # an input (code or options) that cannot be analyzed; the message says why
+   pass
+
+
 def runSimulation(*args, **kwargs):
    # Each simulation starts from the same state, as in a fresh process (so that results do not depend on earlier simulations in the same
    # process, e.g., with -arch all or when uiCA is used as a library). The cyclic garbage collector is paused during the simulation: it
@@ -2154,6 +2159,9 @@ def _runSimulation(disas, uArchConfig: MicroArchConfig, alignmentOffset, initPol
    lastApplicableInstr = next(instr for instr in instructions if instr.isLastDecodedInstr()) # ignore macro-fused instr.
    lastRelevantRound = max(0, len(uopsForRound) - 2) # last round may be incomplete, thus -2
    firstRelevantRound = min(lastRelevantRound, len(uopsForRound) // 2)
+   if (not uopsForRound) or (not uopsForRound[firstRelevantRound][lastApplicableInstr]):
+      # only possible with minIterations < 1: the simulation stopped before the first iteration was complete
+      raise InputError('no iteration was completed (minIterations must be at least 1, or minCycles larger)')
    if lastRelevantRound - firstRelevantRound > 10:
       for rnd in range(lastRelevantRound, lastRelevantRound - 5, -1):
          if uopsForRound[firstRelevantRound][lastApplicableInstr][-1].retireIdx == uopsForRound[rnd][lastApplicableInstr][-1].retireIdx:
