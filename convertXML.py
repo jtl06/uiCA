@@ -85,6 +85,9 @@ AMD_FP_PORTS = {'0': 'k', '1': 'l', '2': 'm', '3': 'n', '4': 'o', '5': 'p'}
 # Branches: the second branch unit (BRU1) is attached to the scheduler of ALU3. Measurements on a Ryzen 7 7735U show that it does not add
 # capacity (K independent adds + dec/jnz run at (K+1)/4 cycles per iteration, 3x test/jnz + dec/jnz at 2), so branches are modeled as uops
 # for ALU0 or ALU3.
+# Round 9 (microbench lb/r9b.txt, r9c.txt): a fused CMP/TEST + Jcc takes no ALU slot (3 adds + 'inc rax' + 'cmp rcx, rax; jne': 1.00
+# cycles per iteration, modeled: 1.50), but all branches, fused DEC + Jcc included, share the two branch units (K x not-taken
+# 'test r, r; jne' + 'dec rcx; jne': (K + 1) / 2); not modeled (one uop cannot need both an ALU and a branch unit).
 AMD_PORTS_FOR_CATEGORY = {'COND_BR': 'ad', 'UNCOND_BR': 'ad', 'CALL': 'ad', 'RET': 'ad',
                           'SHIFT': 'bc', 'ROTATE': 'bc', 'CMOV': 'ad', 'SETCC': 'ad'}
 AMD_PORTS_FOR_ICLASS = {'IMUL': 'b', 'MUL': 'b', 'MULX': 'b', 'DIV': 'a', 'IDIV': 'a', 'BSF': 'b', 'BSR': 'b', 'PDEP': 'b', 'PEXT': 'b', 'CRC32': 'b',

@@ -414,7 +414,8 @@ MicroArchConfigs['ADL-P'].loadValueNumbering = True
 # r13, r8': 2; not modeled: it made the check sets slightly worse); IMUL, POPCNT, TZCNT (port 1) at no cost
 MicroArchConfigs['ADL-P'].foldedShiftDelay = 2
 MicroArchConfigs['ADL-P'].experimental = True
-# perf, Core i7-12650H (microbench lb/r9a.txt): a load that crosses a 64-byte line costs one cycle of all three load ports (4 crossing
+# perf, Core i7-12650H (microbench lb/r9a.txt): a load that crosses a 64-byte line costs as much as three loads (modeled as 3 cycles
+# of its port; 4 crossing
 # 8- or 32-byte loads per iteration: 4.26 cycles, 8: 8.52; 32-byte loads at 4-byte offsets from a pointer that advances by 32, 3.5
 # crossing per iteration: 5.07, predicted 5.02); the latency is 7 cycles longer (not modeled)
 MicroArchConfigs['ADL-P'].splitLoadCycles = 3

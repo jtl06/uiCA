@@ -1,0 +1,9 @@
+# round 9, third batch: branch units (not-taken fused test/jne on zero registers) next to the loop branch
+c_br1: test r10, r10; jne .L; dec rcx; jne .L
+c_br2: test r10, r10; jne .L; test r11, r11; jne .L; dec rcx; jne .L
+c_br3: test r10, r10; jne .L; test r11, r11; jne .L; test r12, r12; jne .L; dec rcx; jne .L
+c_br3c: test r10, r10; jne .L; test r11, r11; jne .L; test r12, r12; jne .L; inc rax; cmp rcx, rax; jne .L
+c_br2c: test r10, r10; jne .L; test r11, r11; jne .L; inc rax; cmp rcx, rax; jne .L
+c_br2a: test r10, r10; jne .L; test r11, r11; jne .L; add r13, 1; add r14, 1; add r15, 1; dec rcx; jne .L
+c_br1a: test r10, r10; jne .L; add r12, 1; add r13, 1; add r14, 1; add r15, 1; dec rcx; jne .L
+c_br4c: test r10, r10; jne .L; test r11, r11; jne .L; test r12, r12; jne .L; test r13, r13; jne .L; inc rax; cmp rcx, rax; jne .L
