@@ -405,6 +405,10 @@ MicroArchConfigs['ADL-P'].loadValueNumbering = True
 # r13, r8': 2; not modeled: it made the check sets slightly worse); IMUL, POPCNT, TZCNT (port 1) at no cost
 MicroArchConfigs['ADL-P'].foldedShiftDelay = 2
 MicroArchConfigs['ADL-P'].experimental = True
+# perf, Core i7-12650H (microbench lb/r9a.txt): a load that crosses a 64-byte line costs one cycle of all three load ports (4 crossing
+# 8- or 32-byte loads per iteration: 4.26 cycles, 8: 8.52; 32-byte loads at 4-byte offsets from a pointer that advances by 32, 3.5
+# crossing per iteration: 5.07, predicted 5.02); the latency is 7 cycles longer (not modeled)
+MicroArchConfigs['ADL-P'].splitLoadCycles = 3
 
 # Experimental: Ice Lake server (Sunny Cove). uops.info only has measurements for client Ice Lake, on which move elimination for general-purpose
 # registers is disabled. On a Xeon Gold 6314U, it is enabled (perf, microbench SET=movs: 'mov r9d, ebx; mov ebx, r9d; or rbx, r8' and the movzx
@@ -435,3 +439,7 @@ MicroArchConfigs['ICX'].loadValueNumbering = True
 # shifts and rotates on memory are also about one cycle shorter there (6.0-6.3 instead of 7), but take 6.8-7.3 in the short loops of
 # microbench SET=rmw2 and rmwctx (timing-dependent forwarding, see above), so they keep the delay of 5.
 MicroArchConfigs['ICX'].rotateCarryRMWForwardDelay = 4
+# perf, Xeon Gold 6314U (microbench lb/r9a.txt): a load that crosses a 64-byte line occupies its load port for 2 cycles (4 crossing
+# 8- or 32-byte loads per iteration: 4.00 cycles, 8: 8.00; 32-byte loads at 4-byte offsets from a pointer that advances by 32: 6.00,
+# predicted 6.00); the latency is 6 cycles longer (not modeled)
+MicroArchConfigs['ICX'].splitLoadCycles = 2
