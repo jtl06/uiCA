@@ -1,0 +1,26 @@
+{
+  "_about": "Cycles per loop iteration measured on a Ryzen 7 7735U (Zen 3+), user-mode cycles, pinned to cpu 2, L1-resident data, the slope between two buffer sizes (removes the per-call overhead). Loops compiled by gcc 16.2 -O3 -march=native. 'dogfood1': wuica 0.1.4 dogfood (aethia /data/projects/wuica-dogfood: kernels.c, bench.c, logs/), 'dogfood2': wuica 0.1.5 GUI dogfood (aethia /data/projects/wuica-gui-dogfood: kern.c, var.c, bench2.c, logs/meas5.txt). The loops are the exact blocks given to wuica; in scan_a and scan_b the exit branch to .Lout was redirected to the loop start, as in the dogfood. Notes give the data or the counter readings that matter.",
+  "ZEN3": {
+    "crc_a": {"cycles": 6.00, "set": "dogfood1", "note": "crc32c, 1 stream, gcc unrolls x2"},
+    "crc_b": {"cycles": 3.00, "set": "dogfood1", "note": "crc32c, 3 streams"},
+    "dot_a": {"cycles": 24.01, "set": "dogfood1", "note": "plain C dot product: vmulps + 8 serial vaddss"},
+    "dot_b": {"cycles": 8.06, "set": "dogfood1", "note": "AVX2 FMA, 8 accumulators"},
+    "dot_c": {"cycles": 4.03, "set": "dogfood1", "note": "AVX2 FMA, 4 accumulators"},
+    "scan_a": {"cycles": 1.90, "set": "dogfood1", "note": "memchr AVX2, 32 B per iteration"},
+    "scan_b": {"cycles": 2.25, "set": "dogfood1", "note": "memchr AVX2, 128 B, OR-reduce + vptest"},
+    "scan_c": {"cycles": 2.31, "set": "dogfood1", "note": "memchr AVX2, 128 B, one pointer + vpmovmskb"},
+    "hist_a": {"cycles": 1.07, "set": "dogfood1", "note": "byte histogram, one table, random bytes (text: 1.21, constant: 1.15)"},
+    "hist_b": {"cycles": 4.00, "set": "dogfood1", "note": "4 tables, 32-bit load, random bytes (text: 4.62)"},
+    "hist_c": {"cycles": 8.00, "set": "dogfood1", "note": "4 tables, 64-bit load, random bytes (text: 9.8-10.1)"},
+    "psum": {"cycles": 1.00, "set": "dogfood2", "note": "scalar prefix sum, gcc"},
+    "psum_2": {"cycles": 2.03, "set": "dogfood2", "note": "prefix sum, 2 elements per chain step"},
+    "psum_v": {"cycles": 10.2, "set": "dogfood2", "note": "AVX2 scan, gcc's carry order (vpermd on the chain)"},
+    "psum_v2": {"cycles": 4.22, "set": "dogfood2", "note": "AVX2 scan, carry chain of one vpaddd"},
+    "fir8": {"cycles": 5.85, "set": "dogfood2", "note": "8-tap FIR, 8 unaligned ymm loads + 8 FMA; ls_misal_loads.ma64: 3.7 per iteration"},
+    "fir8_s": {"cycles": 5.20, "set": "dogfood2", "note": "2 aligned loads + vperm2i128 + 3 vpalignr, 3 unaligned loads; 1.5 split loads per iteration"},
+    "fir8_s2": {"cycles": 6.66, "set": "dogfood2", "note": "all window offsets by shuffles, no split loads"},
+    "udiv": {"cycles": 6.00, "set": "dogfood2", "note": "div ecx (small and full-range dividends)"},
+    "udiv_v": {"cycles": 7.31, "set": "dogfood2", "note": "magic multiply, gcc autovectorized (8 shuffles)"},
+    "udiv_v2": {"cycles": 2.69, "set": "dogfood2", "note": "magic multiply, even/odd vpmuludq + vpblendd"}
+  }
+}

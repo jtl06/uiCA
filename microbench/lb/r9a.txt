@@ -1,0 +1,50 @@
+# round 9: loops for the dogfood bugs (see lb.py for the register conventions)
+# --- reduction / prefix-sum chains next to an index chain (bug 2)
+p_sum: add edx, dword ptr [rdi+rax*4]; inc rax; cmp rcx, rax; jne .L
+p_psum: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; inc rax; cmp rcx, rax; jne .L
+p_sep: mov r10d, dword ptr [rdi+rax*4]; add edx, r10d; mov dword ptr [rsi+rax*4], edx; inc rax; cmp rcx, rax; jne .L
+p_sum1: add edx, dword ptr [rdi+rax*4]; add r11, 1; inc rax; cmp rcx, rax; jne .L
+p_sum2: add edx, dword ptr [rdi+rax*4]; add r11, 1; add r12, 1; inc rax; cmp rcx, rax; jne .L
+p_psum1: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; add r11, 1; inc rax; cmp rcx, rax; jne .L
+p_ptr: add edx, dword ptr [rdi]; add rdi, 4; dec rcx; jne .L
+p_dec: add edx, dword ptr [rdi+rax*4]; dec rcx; jne .L
+p_2ch: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; inc rax; cmp rcx, rax; jne .L
+p_imul: imul edx, dword ptr [rdi+rax*4]; inc rax; cmp rcx, rax; jne .L
+# --- loads that cross a 64-byte line (bug 3): constant addresses, always or never split
+s_y0: vmovups ymm0, ymmword ptr [rdi+32]; vmovups ymm1, ymmword ptr [rdi+96]; vmovups ymm2, ymmword ptr [rdi+160]; vmovups ymm3, ymmword ptr [rdi+224]; dec rcx; jne .L
+s_y4: vmovups ymm0, ymmword ptr [rdi+36]; vmovups ymm1, ymmword ptr [rdi+100]; vmovups ymm2, ymmword ptr [rdi+164]; vmovups ymm3, ymmword ptr [rdi+228]; dec rcx; jne .L
+s_y2: vmovups ymm0, ymmword ptr [rdi+36]; vmovups ymm1, ymmword ptr [rdi+96]; vmovups ymm2, ymmword ptr [rdi+164]; vmovups ymm3, ymmword ptr [rdi+224]; dec rcx; jne .L
+s_y1: vmovups ymm0, ymmword ptr [rdi+36]; dec rcx; jne .L
+s_y8: vmovups ymm0, ymmword ptr [rdi+36]; vmovups ymm1, ymmword ptr [rdi+100]; vmovups ymm2, ymmword ptr [rdi+164]; vmovups ymm3, ymmword ptr [rdi+228]; vmovups ymm4, ymmword ptr [rdi+292]; vmovups ymm5, ymmword ptr [rdi+356]; vmovups ymm6, ymmword ptr [rdi+420]; vmovups ymm7, ymmword ptr [rdi+484]; dec rcx; jne .L
+s_x0: vmovups xmm0, xmmword ptr [rdi+48]; vmovups xmm1, xmmword ptr [rdi+112]; vmovups xmm2, xmmword ptr [rdi+176]; vmovups xmm3, xmmword ptr [rdi+240]; dec rcx; jne .L
+s_x4: vmovups xmm0, xmmword ptr [rdi+56]; vmovups xmm1, xmmword ptr [rdi+120]; vmovups xmm2, xmmword ptr [rdi+184]; vmovups xmm3, xmmword ptr [rdi+248]; dec rcx; jne .L
+s_g0: mov r10, qword ptr [rdi+56]; mov r11, qword ptr [rdi+120]; mov r12, qword ptr [rdi+184]; mov r13, qword ptr [rdi+248]; dec rcx; jne .L
+s_g4: mov r10, qword ptr [rdi+60]; mov r11, qword ptr [rdi+124]; mov r12, qword ptr [rdi+188]; mov r13, qword ptr [rdi+252]; dec rcx; jne .L
+s_g6: mov r10, qword ptr [rdi+60]; mov r11, qword ptr [rdi+124]; mov r12, qword ptr [rdi+188]; mov r13, qword ptr [rdi+252]; mov rbx, qword ptr [rdi+316]; mov r14, qword ptr [rdi+380]; dec rcx; jne .L
+s_glat0: mov r10, qword ptr [rdi+r10+56]; dec rcx; jne .L
+s_glat: mov r10, qword ptr [rdi+r10+60]; dec rcx; jne .L
+s_ylat0: vmovups ymm0, ymmword ptr [rdi+r10+32]; vmovd r10d, xmm0; dec rcx; jne .L
+s_ylat: vmovups ymm0, ymmword ptr [rdi+r10+36]; vmovd r10d, xmm0; dec rcx; jne .L
+s_fma4: vfmadd231ps ymm0, ymm14, ymmword ptr [rdi+36]; vfmadd231ps ymm1, ymm14, ymmword ptr [rdi+100]; vfmadd231ps ymm2, ymm14, ymmword ptr [rdi+164]; vfmadd231ps ymm3, ymm14, ymmword ptr [rdi+228]; dec rcx; jne .L
+# strided: 32-byte loads from a pointer that advances by 32 (the base is 64-byte aligned)
+s_str1: vmovups ymm0, ymmword ptr [rdi+4]; add rdi, 32; cmp r8, rdi; jne .L
+s_str0: vmovups ymm0, ymmword ptr [rdi]; add rdi, 32; cmp r8, rdi; jne .L
+s_str8: vmovups ymm0, ymmword ptr [rdi]; vmovups ymm1, ymmword ptr [rdi+4]; vmovups ymm2, ymmword ptr [rdi+8]; vmovups ymm3, ymmword ptr [rdi+12]; vmovups ymm4, ymmword ptr [rdi+16]; vmovups ymm5, ymmword ptr [rdi+20]; vmovups ymm6, ymmword ptr [rdi+24]; vmovups ymm7, ymmword ptr [rdi+28]; add rdi, 32; cmp r8, rdi; jne .L
+# --- vector shuffles and FP (bug 4)
+f_mul8: vmulps ymm0, ymm14, ymm15; vmulps ymm1, ymm14, ymm15; vmulps ymm2, ymm14, ymm15; vmulps ymm3, ymm14, ymm15; vmulps ymm4, ymm14, ymm15; vmulps ymm5, ymm14, ymm15; vmulps ymm6, ymm14, ymm15; vmulps ymm7, ymm14, ymm15; dec rcx; jne .L
+f_pal6: vpalignr ymm8, ymm14, ymm15, 4; vpalignr ymm9, ymm14, ymm15, 4; vpalignr ymm10, ymm14, ymm15, 4; vpalignr ymm11, ymm14, ymm15, 4; vpalignr ymm12, ymm14, ymm15, 4; vpalignr ymm13, ymm14, ymm15, 4; dec rcx; jne .L
+f_mix: vmulps ymm0, ymm14, ymm15; vmulps ymm1, ymm14, ymm15; vmulps ymm2, ymm14, ymm15; vmulps ymm3, ymm14, ymm15; vmulps ymm4, ymm14, ymm15; vmulps ymm5, ymm14, ymm15; vmulps ymm6, ymm14, ymm15; vmulps ymm7, ymm14, ymm15; vpalignr ymm8, ymm14, ymm15, 4; vpalignr ymm9, ymm14, ymm15, 4; vpalignr ymm10, ymm14, ymm15, 4; vpalignr ymm11, ymm14, ymm15, 4; vpalignr ymm12, ymm14, ymm15, 4; vpalignr ymm13, ymm14, ymm15, 4; dec rcx; jne .L
+f_perm4: vperm2i128 ymm0, ymm14, ymm15, 0x21; vperm2i128 ymm1, ymm14, ymm15, 0x21; vperm2i128 ymm2, ymm14, ymm15, 0x21; vperm2i128 ymm3, ymm14, ymm15, 0x21; dec rcx; jne .L
+f_permpal: vperm2i128 ymm0, ymm14, ymm15, 0x21; vperm2i128 ymm1, ymm14, ymm15, 0x21; vpalignr ymm8, ymm14, ymm15, 4; vpalignr ymm9, ymm14, ymm15, 4; vpalignr ymm10, ymm14, ymm15, 4; vpalignr ymm11, ymm14, ymm15, 4; dec rcx; jne .L
+f_permmul: vperm2i128 ymm0, ymm14, ymm15, 0x21; vperm2i128 ymm1, ymm14, ymm15, 0x21; vmulps ymm2, ymm14, ymm15; vmulps ymm3, ymm14, ymm15; vmulps ymm4, ymm14, ymm15; vmulps ymm5, ymm14, ymm15; dec rcx; jne .L
+f_permd4: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vpermd ymm2, ymm14, ymm15; vpermd ymm3, ymm14, ymm15; dec rcx; jne .L
+f_permq4: vpermq ymm0, ymm15, 0xd8; vpermq ymm1, ymm15, 0xd8; vpermq ymm2, ymm15, 0xd8; vpermq ymm3, ymm15, 0xd8; dec rcx; jne .L
+f_blend8: vpblendd ymm0, ymm14, ymm15, 0xaa; vpblendd ymm1, ymm14, ymm15, 0xaa; vpblendd ymm2, ymm14, ymm15, 0xaa; vpblendd ymm3, ymm14, ymm15, 0xaa; vpblendd ymm4, ymm14, ymm15, 0xaa; vpblendd ymm5, ymm14, ymm15, 0xaa; vpblendd ymm6, ymm14, ymm15, 0xaa; vpblendd ymm7, ymm14, ymm15, 0xaa; dec rcx; jne .L
+f_mulq8: vpmuludq ymm0, ymm14, ymm15; vpmuludq ymm1, ymm14, ymm15; vpmuludq ymm2, ymm14, ymm15; vpmuludq ymm3, ymm14, ymm15; vpmuludq ymm4, ymm14, ymm15; vpmuludq ymm5, ymm14, ymm15; vpmuludq ymm6, ymm14, ymm15; vpmuludq ymm7, ymm14, ymm15; dec rcx; jne .L
+f_shufd8: vpshufd ymm0, ymm15, 0xd8; vpshufd ymm1, ymm15, 0xd8; vpshufd ymm2, ymm15, 0xd8; vpshufd ymm3, ymm15, 0xd8; vpshufd ymm4, ymm15, 0xd8; vpshufd ymm5, ymm15, 0xd8; vpshufd ymm6, ymm15, 0xd8; vpshufd ymm7, ymm15, 0xd8; dec rcx; jne .L
+f_srlq8: vpsrlq ymm0, ymm15, 32; vpsrlq ymm1, ymm15, 32; vpsrlq ymm2, ymm15, 32; vpsrlq ymm3, ymm15, 32; vpsrlq ymm4, ymm15, 32; vpsrlq ymm5, ymm15, 32; vpsrlq ymm6, ymm15, 32; vpsrlq ymm7, ymm15, 32; dec rcx; jne .L
+f_add8: vpaddd ymm0, ymm14, ymm15; vpaddd ymm1, ymm14, ymm15; vpaddd ymm2, ymm14, ymm15; vpaddd ymm3, ymm14, ymm15; vpaddd ymm4, ymm14, ymm15; vpaddd ymm5, ymm14, ymm15; vpaddd ymm6, ymm14, ymm15; vpaddd ymm7, ymm14, ymm15; dec rcx; jne .L
+f_fc8: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; dec rcx; jne .L
+f_fc16: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; dec rcx; jne .L
+f_fc8p: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vpalignr ymm8, ymm14, ymm15, 4; vfmadd231ps ymm0, ymm14, ymm15; vpalignr ymm9, ymm14, ymm15, 4; vfmadd231ps ymm0, ymm14, ymm15; vpalignr ymm10, ymm14, ymm15, 4; vfmadd231ps ymm0, ymm14, ymm15; vpalignr ymm11, ymm14, ymm15, 4; vfmadd231ps ymm0, ymm14, ymm15; vpalignr ymm12, ymm14, ymm15, 4; vfmadd231ps ymm0, ymm14, ymm15; vpalignr ymm13, ymm14, ymm15, 4; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; dec rcx; jne .L
+f_fc8i: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vmulps ymm1, ymm14, ymm15; vmulps ymm2, ymm14, ymm15; vmulps ymm3, ymm14, ymm15; vmulps ymm4, ymm14, ymm15; dec rcx; jne .L

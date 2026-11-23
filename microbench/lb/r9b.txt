@@ -1,0 +1,49 @@
+# round 9, second batch: integer ALU slots of fused branches and stores; FP scheduler window
+b_a4cmp: add r10, 1; add r11, 1; add r12, 1; add r13, 1; inc rax; cmp rcx, rax; jne .L
+b_a3cmp: add r10, 1; add r11, 1; add r12, 1; inc rax; cmp rcx, rax; jne .L
+b_a2cmp: add r10, 1; add r11, 1; inc rax; cmp rcx, rax; jne .L
+b_a4dec: add r10, 1; add r11, 1; add r12, 1; add r13, 1; dec rcx; jne .L
+b_a3dec: add r10, 1; add r11, 1; add r12, 1; dec rcx; jne .L
+b_a5dec: add r10, 1; add r11, 1; add r12, 1; add r13, 1; add rbx, 1; dec rcx; jne .L
+b_a6cmp: add r10, 1; add r11, 1; add r12, 1; add r13, 1; add rbx, 1; add r14, 1; inc rax; cmp rcx, rax; jne .L
+b_a4test: add r10, 1; add r11, 1; add r12, 1; add r13, 1; dec rcx; test rcx, rcx; jne .L
+b_a4cmpu: add r10, 1; add r11, 1; add r12, 1; inc rax; cmp rcx, rax; mov r15, r14; jne .L
+b_st3: mov qword ptr [rsi], r10; add r11, 1; add r12, 1; add r13, 1; dec rcx; jne .L
+b_st4: mov qword ptr [rsi], r10; add r11, 1; add r12, 1; add r13, 1; add rbx, 1; dec rcx; jne .L
+b_st2x: mov qword ptr [rsi], r10; mov qword ptr [rsi+8], r10; add r11, 1; add r12, 1; add r13, 1; dec rcx; jne .L
+b_ps_lea: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; lea r11, [r12+1]; inc rax; cmp rcx, rax; jne .L
+b_ps_sep1: mov r10d, dword ptr [rdi+rax*4]; add edx, r10d; mov dword ptr [rsi+rax*4], edx; add r11, 1; inc rax; cmp rcx, rax; jne .L
+b_ps_dec1: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; add r11, 1; add rax, 1; dec rcx; jne .L
+b_ps_v: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; vpaddd ymm1, ymm2, ymm3; inc rax; cmp rcx, rax; jne .L
+b_sum3: add edx, dword ptr [rdi+rax*4]; add r11, 1; add r12, 1; add r13, 1; inc rax; cmp rcx, rax; jne .L
+b_2ch1: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; add r11, 1; inc rax; cmp rcx, rax; jne .L
+b_3ch: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; add r11d, dword ptr [rdi+rax*4+2048]; inc rax; cmp rcx, rax; jne .L
+b_chains2: add r10, r11; add r12, r13; add r14, 1; dec rcx; jne .L
+b_chains4: add r10, rdx; add r11, rdx; add r12, rdx; add r13, rdx; dec rcx; jne .L
+# FP scheduler window: one FMA chain of K per iteration (independent iterations)
+c_fc10: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; dec rcx; jne .L
+c_fc12: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; dec rcx; jne .L
+c_fc24: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; dec rcx; jne .L
+# a chain of 8 adds of latency 3 (vaddps) and of 1 (vpaddd)
+c_ac16: vxorps ymm0, ymm0, ymm0; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; vaddps ymm0, ymm0, ymm15; dec rcx; jne .L
+# FMA chain of 8 with 8 independent vpaddd after it (younger independent ops behind the chain)
+c_fc8a8: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vpaddd ymm1, ymm14, ymm15; vpaddd ymm2, ymm14, ymm15; vpaddd ymm3, ymm14, ymm15; vpaddd ymm4, ymm14, ymm15; vpaddd ymm5, ymm14, ymm15; vpaddd ymm6, ymm14, ymm15; vpaddd ymm7, ymm14, ymm15; vpaddd ymm8, ymm14, ymm15; dec rcx; jne .L
+c_fc8a16: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vpaddd ymm1, ymm14, ymm15; vpaddd ymm2, ymm14, ymm15; vpaddd ymm3, ymm14, ymm15; vpaddd ymm4, ymm14, ymm15; vpaddd ymm5, ymm14, ymm15; vpaddd ymm6, ymm14, ymm15; vpaddd ymm7, ymm14, ymm15; vpaddd ymm8, ymm14, ymm15; vpaddd ymm1, ymm14, ymm15; vpaddd ymm2, ymm14, ymm15; vpaddd ymm3, ymm14, ymm15; vpaddd ymm4, ymm14, ymm15; vpaddd ymm5, ymm14, ymm15; vpaddd ymm6, ymm14, ymm15; vpaddd ymm7, ymm14, ymm15; vpaddd ymm8, ymm14, ymm15; dec rcx; jne .L
+# a long FP chain next to an integer chain: does the integer side run ahead (non-scheduling queue)?
+c_fc16i: vxorps ymm0, ymm0, ymm0; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; vfmadd231ps ymm0, ymm14, ymm15; imul r10, r10; imul r10, r10; imul r10, r10; dec rcx; jne .L
+# VPERMD / VPERMQ / VPERM2I128 throughput next to other shuffles
+c_permd2: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; dec rcx; jne .L
+c_permd1: vpermd ymm0, ymm14, ymm15; dec rcx; jne .L
+c_permdpal: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vpalignr ymm8, ymm14, ymm15, 4; vpalignr ymm9, ymm14, ymm15, 4; dec rcx; jne .L
+c_permdmul: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vmulps ymm2, ymm14, ymm15; vmulps ymm3, ymm14, ymm15; dec rcx; jne .L
+c_permdadd: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vpaddd ymm2, ymm14, ymm15; vpaddd ymm3, ymm14, ymm15; vpaddd ymm4, ymm14, ymm15; vpaddd ymm5, ymm14, ymm15; dec rcx; jne .L
+c_permlat: vpermd ymm0, ymm14, ymm0; dec rcx; jne .L
+c_perm2lat: vperm2i128 ymm0, ymm0, ymm14, 0x21; dec rcx; jne .L
+c_pallat: vpalignr ymm0, ymm0, ymm14, 4; dec rcx; jne .L
+c_mulqlat: vpmuludq ymm0, ymm0, ymm14; dec rcx; jne .L
+c_blendlat: vpblendd ymm0, ymm0, ymm14, 0xaa; dec rcx; jne .L
+c_permqlat: vpermq ymm0, ymm0, 0xd8; dec rcx; jne .L
+c_mulqpal: vpmuludq ymm0, ymm14, ymm15; vpmuludq ymm1, ymm14, ymm15; vpmuludq ymm2, ymm14, ymm15; vpmuludq ymm3, ymm14, ymm15; vpalignr ymm8, ymm14, ymm15, 4; vpalignr ymm9, ymm14, ymm15, 4; vpalignr ymm10, ymm14, ymm15, 4; vpalignr ymm11, ymm14, ymm15, 4; dec rcx; jne .L
+c_mulqmul: vpmuludq ymm0, ymm14, ymm15; vpmuludq ymm1, ymm14, ymm15; vpmuludq ymm2, ymm14, ymm15; vpmuludq ymm3, ymm14, ymm15; vmulps ymm4, ymm14, ymm15; vmulps ymm5, ymm14, ymm15; vmulps ymm6, ymm14, ymm15; vmulps ymm7, ymm14, ymm15; dec rcx; jne .L
+c_srlmul: vpsrlq ymm0, ymm14, 32; vpsrlq ymm1, ymm14, 32; vpsrlq ymm2, ymm14, 32; vpsrlq ymm3, ymm14, 32; vmulps ymm4, ymm14, ymm15; vmulps ymm5, ymm14, ymm15; vmulps ymm6, ymm14, ymm15; vmulps ymm7, ymm14, ymm15; dec rcx; jne .L
+c_pal4add4: vpalignr ymm8, ymm14, ymm15, 4; vpalignr ymm9, ymm14, ymm15, 4; vpalignr ymm10, ymm14, ymm15, 4; vpalignr ymm11, ymm14, ymm15, 4; vpaddd ymm0, ymm14, ymm15; vpaddd ymm1, ymm14, ymm15; vpaddd ymm2, ymm14, ymm15; vpaddd ymm3, ymm14, ymm15; dec rcx; jne .L
