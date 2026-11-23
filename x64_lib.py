@@ -115,7 +115,7 @@ def getSizeOfMemPrefix(memPrefix):
 
 def getRegSize(reg):
    if reg[-1] == 'L' or reg[-1] == 'H' or reg[-1] == 'B': return 8
-   elif reg[-1] == 'W' or reg in ['AX', 'BX', 'CX', 'DX', 'SP', 'BP' 'SI', 'DI']: return 16
+   elif reg[-1] == 'W' or reg in ['AX', 'BX', 'CX', 'DX', 'SP', 'BP', 'SI', 'DI']: return 16
    elif reg[0] == 'E' or reg[-1] == 'D': return 32
    elif reg in GPRegs: return 64
    elif reg.startswith('MM'): return 64
