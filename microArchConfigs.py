@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -83,6 +83,8 @@ class MicroArchConfig:
       # renameImmediateFolding: additional latency for a shift or rotate (also SHLX, SHRX, SARX, RORX) that reads a register whose value was
       # computed by the renamer (e.g., the result of 'add rax, 1')
       self.foldedShiftDelay = foldedShiftDelay
+      # store-forwarding delay for the loads of read-modify-write RCL and RCR (None: rmwForwardDelay)
+      self.rotateCarryRMWForwardDelay = rotateCarryRMWForwardDelay
       self.loadOpForwardDelay = loadOpForwardDelay # store-forwarding delay for the loads of load-op instructions (None: storeForwardDelay)
       # if set: the number of different cache lines that loads can access per cycle; loads to the same line at different offsets share an access.
       # Modeled statically: a load may only use the load ports after the first loadLineSlots ones if another load of the loop accesses the same
@@ -420,3 +422,8 @@ MicroArchConfigs['ICX'].storeForwardFailDelay = 14
 # per iteration in random loops (microbench dev11, found with fuzz/ablate.py; 6 with the default delay); a delay of 5 fits them better than 6
 MicroArchConfigs['ICX'].loadOpForwardDelay = 5
 MicroArchConfigs['ICX'].loadValueNumbering = True
+# perf, Xeon Gold 6314U, random loops (microbench dev13): read-modify-write RCL/RCR chains are one cycle shorter than with rmwForwardDelay
+# ('rcl qword ptr [rsi+6656], cl' 11.1 cycles per iteration, predicted 13 with 5; 'rcl word ptr [rsi+6912], 1' 7.1, predicted 9). Other
+# shifts and rotates on memory are also about one cycle shorter there (6.0-6.3 instead of 7), but take 6.8-7.3 in the short loops of
+# microbench SET=rmw2 and rmwctx (timing-dependent forwarding, see above), so they keep the delay of 5.
+MicroArchConfigs['ICX'].rotateCarryRMWForwardDelay = 4

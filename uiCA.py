@@ -181,6 +181,7 @@ class RenamedOperand:
 
 
 RenameDictEntry = namedtuple('RenameDictEntry', ['renamedOp', 'renamedByElim32BitMove'])
+ROTATE_CARRY_RMW_RE = re.compile(r'^(RCL|RCR)[ _]') # see MicroArchConfig.rotateCarryRMWForwardDelay
 FOLDED_SHIFT_RE = re.compile(r'^(SHL|SHR|SAR|SAL|ROL|ROR|SHLX|SHRX|SARX|RORX)[ _]')
 
 # the additional latency of an instruction for a register whose value was computed by the renamer (MicroArchConfig.foldedShiftDelay)
@@ -1385,6 +1386,8 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
             loadUopProps[-1].forwardDelay = uArchConfig.rmwForwardDelay
             if (len(nonMemPcs) == 1) and (not instr.memRenaming):
                loadUopProps[-1].forwardDelay += uArchConfig.simpleRMWForwardDelay
+            if (uArchConfig.rotateCarryRMWForwardDelay is not None) and ROTATE_CARRY_RMW_RE.match(instr.instrStr):
+               loadUopProps[-1].forwardDelay = uArchConfig.rotateCarryRMWForwardDelay
 
       for i, (stAPc, stDPc) in enumerate(zip(storeAddressPcs, storeDataPcs)):
          stAInputOperands = instr.memAddrOperands
