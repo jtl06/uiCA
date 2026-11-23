@@ -315,7 +315,10 @@ class Renamer:
                   if uop.prop.isStoreAddressUop or uop.prop.isStoreDataUop:
                      uop.storeBufferEntry = self.curStoreBufferEntry
                      self.curStoreBufferEntry.uops.append(uop)
-                  if uop.prop.isLoadUop:
+                  # A load uop can have no address: the port data of some instructions without a memory input operand has a load port
+                  # (e.g., PCMPESTRI with register operands on SNB/IVB, OUT, INS). Such a uop reads no store and gets no fast pointer
+                  # chasing (it keeps the defaults of Uop).
+                  if uop.prop.isLoadUop and (uop.prop.memAddr is not None):
                      key = self.getStoreBufferKey(uop.prop.memAddr)
                      baseReg = uop.prop.memAddr.get('base')
                      baseEntry = self.renameDict.get(getCanonicalReg(baseReg)) if baseReg else None
