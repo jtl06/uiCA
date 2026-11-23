@@ -17,14 +17,19 @@ An online version of uiCA is available at [uiCA.uops.info](https://uiCA.uops.inf
 
 * Prerequisites:
 
-      sudo apt-get install gcc python3 python3-pip graphviz
+      sudo apt-get install gcc git wget python3 python3-dev python3-setuptools python3-pip graphviz
       pip3 install plotly
+
+  `python3-dev` (the Python headers) and `setuptools` are needed to build the XED Python module; Python 3.12 and later no longer include setuptools.
+  In a virtual environment, use `pip install setuptools` instead (the Python installation must include its headers).
 
 * Installation:
 
       git clone https://github.com/andreas-abel/uiCA.git
       cd uiCA
       ./setup.sh
+
+  `setup.sh` builds XED and downloads the instruction data from uops.info (about 140 MB), from which it generates `instrData/`.
 
 * Update:
 
