@@ -97,6 +97,12 @@ amdStats = defaultdict(lambda: defaultdict(int))
 amdTPMismatches = defaultdict(list)
 
 AMD_CROSS_DOMAIN_BOUND_CORRECTION = 2
+# perf, Ryzen 7 7735U (microbench mb/mc8.txt, SET=rmw2): ADC and SBB on 8- or 16-bit memory (not memory-renamed) form chains through
+# memory of 7.6 cycles per iteration ('adc word ptr [rsi+64], 3', 'sbb byte ptr ...'; uops.info: 5); in random loops (microbench dev13)
+# 6.3-7.0. ADD on word memory: 6.9 (uops.info: 7). Shifts and rotates on 8/16-bit memory (uops.info: 6) take 6.3 alone and 6.8-7.3 in
+# random loops; they are left at 6 (7 helps the random loops but not the hand-written ones).
+AMD_NARROW_RMW_MEM_LATENCY = {'ZEN3': 7}
+AMD_NARROW_RMW_ICLASSES = ('ADC', 'SBB')
 # perf, Ryzen 7 7735U (microbench SET=v2g): a move from a vector to a general-purpose register (vmovq, vmovmskpd, vpextrd, vcvttsd2si) next to
 # k independent 'add r64, 1' takes about (k + 5) / 4 cycles per iteration for k >= 2, as if it used four integer-ALU slots; modeled as additional
 # uops for the ALUs (random loops, microbench dev11/dev9/fresh: 1, 2, 3, 4 additional uops; 3 fits best)
@@ -380,6 +386,13 @@ def main():
                   if ('min_cycles_' + suffix in latNode.attrib) and ('cycles_' + suffix not in latNode.attrib):
                      latData[(startOp, targetOp, key)] = int(latNode.attrib['min_cycles_' + suffix])
 
+            narrowRMWLat = AMD_NARROW_RMW_MEM_LATENCY.get(archNode.attrib['name']) if isAMD else None
+            if (narrowRMWLat and (XMLInstr.attrib['iclass'] in AMD_NARROW_RMW_ICLASSES)
+                  and any((o.attrib.get('type') == 'mem') and (o.attrib.get('r') == '1') and (o.attrib.get('w') == '1')
+                          and (o.attrib.get('width') in ('8', '16')) for o in XMLInstr.iter('operand'))):
+               for k in list(latData):
+                  if (len(k) == 3) and (k[2] == 'mem') and (k[0] == k[1]) and k[0].startswith('MEM'):
+                     latData[k] = max(latData[k], narrowRMWLat)
             if latData:
                perfData['lat'] = latData
             if latDataSameReg:
