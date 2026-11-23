@@ -375,6 +375,11 @@ MicroArchConfigs['ADL-P'].memRenamingExcluded = ('MOVSX', 'MOVSXD')
 MicroArchConfigs['ADL-P'].memRenamingFoldedCheck = True
 # perf, Core i7-12650H: 'mov rax, [rsp+8]; mov [rsp+8], eax' (a load that is wider than the store) takes 20 cycles per iteration
 MicroArchConfigs['ADL-P'].storeForwardFailDelay = 15
+# perf, Core i7-12650H: random loops with a store and a load from the same address that is not memory-renamed (e.g. a vector store and
+# load, 'movaps [rsi+7232], xmm7; movaps xmm2, [rsi+7232]') fit a forwarding delay of 5 better than 4 (microbench dev9, fresh, holdout2/3: +0.1..+0.4%
+# within 10%, 1-2 loops broken per set)
+MicroArchConfigs['ADL-P'].storeForwardDelay = 5
+MicroArchConfigs['ADL-P'].rmwForwardDelayOverride = 4 # read-modify-write chains (microbench SET=rmw2, rmwctx) fit the default delay
 MicroArchConfigs['ADL-P'].loadValueNumbering = True
 MicroArchConfigs['ADL-P'].experimental = True
 
