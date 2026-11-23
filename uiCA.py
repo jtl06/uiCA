@@ -2070,7 +2070,9 @@ def generateJSONOutput(filename, instructions: List[Instr], frontEnd: FrontEnd, 
                if (uop.dispatched is not None) and (uop.dispatched <= maxCycle):
                   cycles[uop.dispatched].setdefault('dispatched', {})['Port' + uop.actualPort] = unfusedUopDict
                if (uop.executed is not None) and (uop.executed <= maxCycle):
-                  cycles[uop.executed].setdefault('executed', []).append(unfusedUopDict)
+                  # executed is a float if the instruction has a fractional throughput limit (instr.TP, see processPendingUops); the
+                  # event goes to the cycle in which it lies
+                  cycles[int(uop.executed)].setdefault('executed', []).append(unfusedUopDict)
 
    import json
    jsonStr = json.dumps({'parameters': parameters, 'instructions': instrList, 'cycles': cycles}, sort_keys=True)
