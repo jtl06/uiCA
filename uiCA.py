@@ -2159,7 +2159,7 @@ def main():
    parser.add_argument('-arch', help='Microarchitecture; Possible values: all, ' + ', '.join(allMicroArchs), default='all')
    parser.add_argument('-trace', help='HTML trace', nargs='?', const='trace.html')
    parser.add_argument('-graph', help='HTML graph', nargs='?', const='graph.html')
-   parser.add_argument('-TPonly', help='Output only the TP prediction', nargs='?', const='graph.html')
+   parser.add_argument('-TPonly', help='Output only the TP prediction', action='store_true')
    parser.add_argument('-simpleFrontEnd', help='Simulate a simple front end that is only limited by the issue width', action='store_true')
    parser.add_argument('-noMicroFusion', help='Variant that does not support micro-fusion', action='store_true')
    parser.add_argument('-noMacroFusion', help='Variant that does not support macro-fusion', action='store_true')
