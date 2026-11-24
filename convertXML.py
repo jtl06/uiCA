@@ -71,6 +71,12 @@ INSTR_CORRECTIONS = {
       'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'CMPXCHG8B (M64)': {'TP_MS': 13},
+      # perf, Xeon Gold 6314U (round 11, probes ones11: 8 dependent vpaddd after the compare): VEX compare-equal with the same register
+      # for all operands (all ones) does not depend on the register (3.2 cycles per iteration; dependent reference 9.0), as the legacy
+      # forms already are in the data (lat_SR); the RKL data has no same-register latencies for the VEX forms
+      'VPCMPEQB (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQW (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQD (XMM, XMM, XMM)': {'lat_SR': 0},
+      'VPCMPEQQ (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQB (YMM, YMM, YMM)': {'lat_SR': 0}, 'VPCMPEQW (YMM, YMM, YMM)': {'lat_SR': 0},
+      'VPCMPEQD (YMM, YMM, YMM)': {'lat_SR': 0}, 'VPCMPEQQ (YMM, YMM, YMM)': {'lat_SR': 0},
       # perf, Xeon Gold 6314U (round 11): double square root (xmm) latency 18 (13), 6.0 cycles per instruction (4); vsqrtpd ymm 12 (9)
       'SQRTSD (XMM, XMM)': {'lat': {('REG0', 'REG0'): 18, ('REG1', 'REG0'): 18}, 'divC': 6},
       'VSQRTSD (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 18, ('REG2', 'REG0'): 18}, 'divC': 6},
@@ -118,6 +124,9 @@ def applyInstrCorrections(arch, instrString, perfData):
    for k in ('TP', 'TP_MS', 'divC'):
       if k in c:
          perfData[k] = c[k]
+   if 'lat_SR' in c:
+      # same-register latencies (dependency-breaking idioms): every latency of the form, set to this value
+      perfData['lat_SR'] = {k: c['lat_SR'] for k in perfData.get('lat', {})}
    if c.get('lat'):
       perfData['lat'] = dict(perfData.get('lat', {}))
       perfData['lat'].update(c['lat'])
