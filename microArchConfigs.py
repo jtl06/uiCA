@@ -550,3 +550,9 @@ MicroArchConfigs['ICX'].storeForwardFailInterval = 18
 # groups (the loop stream detector unrolls small loops, the hardware does not) index 3 reproduces 17 of 51 probes' executed moves
 # (index 4: 30; none: 6).
 MicroArchConfigs['ICX'].moveElimBlockedSlots = (3,)
+# Round 11 (perf, Xeon Gold 6314U): lsd.uops is 0 on all dev loops (no LSD on this core; the model keeps the LSD as the stand-in for
+# the uop cache's steady state), and a small loop takes at least one cycle per 64-byte line its bytes touch: 4- and 7-instruction loops
+# at every 4th offset run at 1.1-1.6 cycles inside one line and at 2.00 whenever they touch two (13 of 13 such offsets; model 1.50; with
+# the line delivery 2.01 on 12, 1.52 on one where only the last byte of the loop branch is in the next line). 72 front-end probes
+# (N long NOPs) are unchanged except two that touch a second line (2.00, 1.99; now 2.00, 2.00; before 1.50, 1.75).
+MicroArchConfigs['ICX'].lsdLineDelivery = True
