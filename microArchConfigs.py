@@ -13,7 +13,7 @@ class MicroArchConfig:
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
                 loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, domainBypassDelay=0, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0,
                 vecRegFileSize=None, gprRegFileSize=None, vecRegFreeDelay=0, gprRegFreeDelay=0, storeForwardOverlap=False, vectorStoreForwardDelay=None,
-                storeForwardFailInterval=0):
+                storeForwardFailInterval=0, branchPorts=None, fusedALUBranchPorts=None, amdBranchFusionRules=False):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -134,6 +134,16 @@ class MicroArchConfig:
       # if > 0: loads whose forwarding fails are handled one at a time: each one's value is ready no earlier than this many cycles after
       # the previous failing load's
       self.storeForwardFailInterval = storeForwardFailInterval
+      # if set: the ports of conditional and unconditional branches (their non-memory uops), replacing those of the instruction data
+      self.branchPorts = branchPorts
+      # AMD: if set, a fused pair whose first instruction writes a general-purpose register (ADD, SUB, INC, DEC, AND, OR, XOR + Jcc) executes
+      # on these ports instead of the branch's (a branch unit that is also an ALU); CMP and TEST + Jcc keep the branch's ports
+      self.fusedALUBranchPorts = fusedALUBranchPorts
+      # AMD: the branch-fusion rules of the Software Optimization Guide for family 19h (2.8.5): instructions with a memory operand can
+      # be fused with a following branch (when the instruction data says they are fusible), but not if the instruction has both an
+      # immediate and a displacement or uses RIP-relative addressing, or if the two instructions are longer than 15 bytes together; INC
+      # and DEC are not fused with branches that depend on CF. If False, instructions with a memory operand are not fused.
+      self.amdBranchFusionRules = amdBranchFusionRules
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property

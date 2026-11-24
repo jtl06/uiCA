@@ -96,6 +96,9 @@ AMD_PORTS_FOR_ICLASS = {'IMUL': 'b', 'MUL': 'b', 'MULX': 'b', 'DIV': 'a', 'IDIV'
 # Measured on a Ryzen 7 7735U (Zen 3+): the register/immediate forms of these instructions are fused with a subsequent jnz. We assume that
 # this holds for all conditional jumps; forms with memory operands were not measured and are treated as not fusible.
 AMD_MACRO_FUSIBLE_ICLASSES = ['CMP', 'TEST', 'ADD', 'SUB', 'AND', 'OR', 'XOR', 'INC', 'DEC']
+# SOG 19h, 2.10.2: ALU0 has branch capability, and a separate branch execution unit (BRU) is attached to scheduler 3; the BRU is the port
+# 'q' (MicroArchConfig.branchPorts)
+AMD_BRANCH_UNIT_PORT = 'q'
 amdStats = defaultdict(lambda: defaultdict(int))
 amdTPMismatches = defaultdict(list)
 
@@ -356,9 +359,14 @@ def main():
             macroFusible = measurementNode.attrib.get('macro_fusible')
             if macroFusible is not None:
                instrData['macroFusible'] = set(macroFusible.split(';'))
-            if (isAMD and (XMLInstr.attrib['iclass'] in AMD_MACRO_FUSIBLE_ICLASSES)
-                  and not any(o.attrib.get('type') == 'mem' for o in XMLInstr.iter('operand'))):
-               instrData['macroFusible'] = condJumps
+            if isAMD and (XMLInstr.attrib['iclass'] in AMD_MACRO_FUSIBLE_ICLASSES):
+               memOps = [o for o in XMLInstr.iter('operand') if o.attrib.get('type') == 'mem']
+               memDest = any('w' in (o.attrib.get('w', '') + o.attrib.get('rw', '')) or o.attrib.get('w') == '1' for o in memOps)
+               if not memOps:
+                  instrData['macroFusible'] = condJumps
+               elif (XMLInstr.attrib['iclass'] in ('CMP', 'TEST')) or not memDest:
+                  # memory forms: only with MicroArchConfig.amdBranchFusionRules (see instructions.py)
+                  instrData['macroFusible'] = condJumps
 
             latData = dict()
             latDataSameReg = dict()
@@ -462,6 +470,8 @@ def main():
    ALUPorts = {}
    for arch in instrDataForArch.keys():
       allPorts[arch] = sorted({p for pd in perfDataForArch[arch] for pc in pd.get('ports', {}).keys() for p in pc})
+      if MicroArchConfigs[arch].isAMD:
+         allPorts[arch] = sorted(set(allPorts[arch]) | {AMD_BRANCH_UNIT_PORT})
       ALUPorts[arch] = sorted(next(iter(perfDataForArch[arch][instrDataForArch[arch]['AND_GPRv_IMMb'][0]['perfData']]['ports'].keys())))
    with open(os.path.join(path, 'uArchInfo.py'), 'w') as f:
       f.write('allPorts = ' + repr(allPorts) + '\n')

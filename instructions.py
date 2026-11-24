@@ -13,6 +13,25 @@ def memWidth(instrStr):
    m = re.search(r'\bM(\d+)\b', instrStr)
    return int(m.group(1)) if m else None
 
+def fusibleMemForm(prevInstr, branch, uArchConfig):
+   # MicroArchConfig.amdBranchFusionRules (other microarchitectures: the instruction data decides)
+   if not uArchConfig.isAMD:
+      return True
+   mem = prevInstr.inputMemOperands or prevInstr.outputMemOperands
+   rules = uArchConfig.isAMD and uArchConfig.amdBranchFusionRules
+   if rules and prevInstr.instrStr.startswith(('INC ', 'DEC ')) and branch.instrStr.split(' ')[0] in ('JB', 'JNB', 'JBE', 'JNBE'):
+      return False
+   if not mem:
+      return True
+   if not rules:
+      return False
+   for m in mem:
+      a = m.memAddr or {}
+      if a.get('base') == 'RIP' or ((prevInstr.immediate is not None) and a.get('disp')):
+         return False
+   return (len(prevInstr.opcode) + len(branch.opcode)) // 2 <= 15
+
+
 class Instr:
    opCacheFields = 0 # number of immediate and displacement fields (see MicroArchConfig.opCacheEntryFields)
    uopGrouping = None # set by the simulator (see computeUopGrouping in uiCA.py)
@@ -409,6 +428,13 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                                 memAddrOperands, agenOperands, latencies, TP, immediate, lcpStall, implicitRSPChange, mayBeEliminated, complexDecoder,
                                 nAvailableSimpleDecoders, hasLockPrefix, isBranchInstr, isSerializingInstr, isLoadSerializing, isStoreSerializing,
                                 macroFusibleWith)
+            if uArchConfig.branchPorts and instrD['category'] in ('COND_BR', 'UNCOND_BR') and portData:
+               memPorts = uArchConfig.loadPorts + uArchConfig.storeAddrPorts + uArchConfig.storeDataPorts
+               newPortData = {}
+               for p, u in portData.items():
+                  k = p if any((x in memPorts) for x in p) else uArchConfig.branchPorts
+                  newPortData[k] = newPortData.get(k, 0) + u
+               instruction.portData = newPortData
             if uArchConfig.renameImmediateFolding and (not uops) and (not mayBeEliminated) and (not sameReg) and instrOutputRegOperands:
                iclass = instrD['iform'].split('_')[0]
                if iclass in ['ADD', 'SUB', 'INC', 'DEC']:
@@ -439,7 +465,7 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
       if instructions:
          prevInstr = instructions[-1]
          # Macrofusion does not happen when the jump is at the beginning of a 64 byte cache line
-         if instruction.instrStr in prevInstr.macroFusibleWith and (addr % 64) != 0:
+         if instruction.instrStr in prevInstr.macroFusibleWith and (addr % 64) != 0 and fusibleMemForm(prevInstr, instruction, uArchConfig):
             instruction.macroFusedWithPrevInstr = True
             prevInstr.macroFusedWithNextInstr = True
             instrPorts = list(instruction.portData.keys())[0]
@@ -448,6 +474,8 @@ def getInstructions(disas, uArchConfig: MicroArchConfig, archData, alignmentOffs
                prevInstr.portData = instruction.portData
             elif uArchConfig.isAMD:
                # the fused uop is executed by a branch unit
+               if uArchConfig.fusedALUBranchPorts and any(getCanonicalReg(op.reg) in GPRegs for op in prevInstr.outputRegOperands):
+                  instrPorts = uArchConfig.fusedALUBranchPorts
                prevInstr.portData = dict(prevInstr.portData)
                for p, u in list(prevInstr.portData.items()):
                   if not any((port in uArchConfig.loadPorts + uArchConfig.storeDataPorts) for port in p):
