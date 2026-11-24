@@ -70,6 +70,8 @@ INSTR_CORRECTIONS = {
       'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'CMPXCHG8B (M64)': {'TP_MS': 13},
+      # perf, Xeon Gold 6314U (round 11): chains through the merged operand of VCVTSD2SS 2 cycles (1), through CVTSS2SD 6 (5)
+      'VCVTSD2SS (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 2}}, 'CVTSS2SD (XMM, XMM)': {'lat': {('REG1', 'REG0'): 6}},
       # perf, Xeon Gold 6314U (round 11, ICX real-loop diagnosis; generated loops of one form, 12 independent copies, without xmm0 for
       # the forms with an implicit xmm0): SHA256RNDS2 and SHA1RNDS4 3.00 cycles per instruction (RKL data 1.25 / 1.00), SHA256MSG1 5.09
       # (4.08); VEX blends with a register mask 1.00 (0.67; 2 uops spread over p0/p1/p5); 512-bit stores to one line 1.00 (0.50);
