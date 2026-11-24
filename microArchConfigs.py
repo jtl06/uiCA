@@ -400,6 +400,13 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # loads per iteration: 6.00, predicted 5.78); also 8- and 16-byte loads (6 crossing 8-byte loads: 4.03); the latency is 1 cycle longer
    # (not modeled). Only crossings that the addresses of the loop make knowable (see splitLoadPatterns in instructions.py).
    splitLoadCycles = 2,
+   # SOG 19h, 2.10.2: ALU0 has branch capability and a separate branch unit (BRU, port 'q') is attached to scheduler 3. Loop benchmarks
+   # (microbench lb/r9b.txt, r9c.txt): a fused CMP/TEST + Jcc takes no ALU slot (3 adds + 'inc rax' + 'cmp rcx, rax; jne': 1.00 cycles per
+   # iteration, before 1.50, now 1.00), K adds + a fused DEC + Jcc take (K + 1) / 4 cycles (the fused pair needs an ALU: ALU0), and at
+   # most two branches execute per cycle (K x not-taken 'test; jne' + 'dec; jne': (K + 1) / 2). Of the 193 loop benchmarks of rounds 9
+   # and 10, 123 -> 131 within 10 % (MAPE 12.1 -> 9.5 %).
+   branchPorts = 'aq',
+   fusedALUBranchPorts = 'a',
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
