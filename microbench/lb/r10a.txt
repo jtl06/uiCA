@@ -1,0 +1,37 @@
+# round 10: integer scheduling of chains that share the ALUs (prefix sums, reductions), dispatch-only ops, ALU/AGU sharing
+# --- prefix sum + one more macro-op: does an op that needs no ALU (nop, eliminated move, vector op) cost as much as an ALU op?
+q_ps: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; inc rax; cmp rcx, rax; jne .L
+q_ps_nop: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; nop; inc rax; cmp rcx, rax; jne .L
+q_ps_nop2: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; nop; nop; inc rax; cmp rcx, rax; jne .L
+q_ps_mov: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; mov r11, r12; inc rax; cmp rcx, rax; jne .L
+q_ps_lea: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; lea r11, [r12+1]; inc rax; cmp rcx, rax; jne .L
+q_ps_sti: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], r12d; inc rax; cmp rcx, rax; jne .L
+q_ps_sti_lea: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], r12d; lea r11, [r12+1]; inc rax; cmp rcx, rax; jne .L
+q_ps_ld: add edx, dword ptr [rdi+rax*4]; mov dword ptr [rsi+rax*4], edx; mov r11d, dword ptr [rdi+2048]; inc rax; cmp rcx, rax; jne .L
+# --- reduction (no store) + K non-chain ALU ops (lea) or chain ops (add r, 1)
+q_s: add edx, dword ptr [rdi+rax*4]; inc rax; cmp rcx, rax; jne .L
+q_s_lea1: add edx, dword ptr [rdi+rax*4]; lea r11, [r12+1]; inc rax; cmp rcx, rax; jne .L
+q_s_lea2: add edx, dword ptr [rdi+rax*4]; lea r11, [r12+1]; lea r13, [r12+2]; inc rax; cmp rcx, rax; jne .L
+q_s_lea3: add edx, dword ptr [rdi+rax*4]; lea r11, [r12+1]; lea r13, [r12+2]; lea r14, [r12+3]; inc rax; cmp rcx, rax; jne .L
+q_s_nop1: add edx, dword ptr [rdi+rax*4]; nop; inc rax; cmp rcx, rax; jne .L
+q_s_nop3: add edx, dword ptr [rdi+rax*4]; nop; nop; nop; inc rax; cmp rcx, rax; jne .L
+q_s_dec: add edx, dword ptr [rdi+rax*4]; inc rax; dec rcx; jne .L
+q_s_sep: mov r10d, dword ptr [rdi+rax*4]; add edx, r10d; inc rax; cmp rcx, rax; jne .L
+q_s_lag: lea r9, [rax*4]; add edx, dword ptr [rdi+r9]; inc rax; cmp rcx, rax; jne .L
+q_s2: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; inc rax; cmp rcx, rax; jne .L
+q_s2_lea: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; lea r11, [r12+1]; inc rax; cmp rcx, rax; jne .L
+q_s2_nop: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; nop; inc rax; cmp rcx, rax; jne .L
+q_s3_dec: add edx, dword ptr [rdi+rax*4]; add r10d, dword ptr [rdi+rax*4+1024]; add r11d, dword ptr [rdi+rax*4+2048]; add rax, 1; dec rcx; jne .L
+# --- 1-cycle chains without loads (lockstep): N chains + loop control
+q_c3c: add r10, 1; add r11, 1; add r12, 1; inc rax; cmp rcx, rax; jne .L
+q_c3n: add r10, 1; add r11, 1; add r12, 1; nop; inc rax; cmp rcx, rax; jne .L
+q_c2n2: add r10, 1; add r11, 1; nop; nop; inc rax; cmp rcx, rax; jne .L
+q_c3l: add r10, 1; add r11, 1; add r12, 1; lea r13, [r14+1]; dec rcx; jne .L
+# --- loads, stores and ALU ops together (do loads and stores take the ALU schedulers' issue slots?)
+q_l3a3: mov r10, qword ptr [rdi]; mov r11, qword ptr [rdi+64]; mov r12, qword ptr [rdi+128]; add r13, 1; add r14, 1; add r15, 1; dec rcx; jne .L
+q_l3a4: mov r10, qword ptr [rdi]; mov r11, qword ptr [rdi+64]; mov r12, qword ptr [rdi+128]; add r13, 1; add r14, 1; add r15, 1; add rbx, 1; dec rcx; jne .L
+q_l2a3: mov r10, qword ptr [rdi]; mov r11, qword ptr [rdi+64]; add r13, 1; add r14, 1; add r15, 1; dec rcx; jne .L
+q_s2a3: mov qword ptr [rsi], r10; mov qword ptr [rsi+8], r11; add r13, 1; add r14, 1; add r15, 1; dec rcx; jne .L
+q_s1a3: mov qword ptr [rsi], r10; add r13, 1; add r14, 1; add r15, 1; dec rcx; jne .L
+q_lo3a3: add r10, qword ptr [rdi]; add r11, qword ptr [rdi+64]; add r12, qword ptr [rdi+128]; add r13, 1; dec rcx; jne .L
+q_lo2a2: add r10, qword ptr [rdi]; add r11, qword ptr [rdi+64]; add r13, 1; dec rcx; jne .L
