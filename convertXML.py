@@ -40,6 +40,8 @@ INSTR_CORRECTIONS = {
       'VROUNDSS (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}},
       'VROUNDSS (XMM, XMM, M32, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, M64, I8)': {'lat': {('REG1', 'REG0'): 3}},
       'CVTPI2PD (XMM, M64)': {'TP': 3.0},
+      # perf, Ryzen 7 7735U (ZEN3 real-loop diagnosis): a chain through the merged (first source) operand takes 3 cycles (uops.info: 0)
+      'VCVTSD2SS (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 3}}, 'VCVTSS2SD (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 3}},
       # perf, Ryzen 7 7735U (ZEN3 real-loop diagnosis, independent 'mul r13' with 'xor eax, eax' between; 'mulx' with register or
       # memory source): 1.33 and 1.22 cycles per instruction (uops.info: 1)
       'MUL (R64)': {'TP': 1.33}, 'MULX (R64, R64, R64)': {'TP': 1.22}, 'MULX (R64, R64, M64)': {'TP': 1.22},
