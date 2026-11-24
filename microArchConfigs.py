@@ -330,6 +330,16 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # perf, Ryzen 7 7735U: a store and a load-op instruction that reads it ('mov [rsi+64], rax; add rax, [rsi+64]'; load-op instructions
    # are not memory-renamed) form a chain of 8.24 cycles per iteration
    storeForwardDelay = 6,
+   # perf, Ryzen 7 7735U (round 11, 27 forwarding probes: a chain through a store and a load of it): a 1-, 2-, 4- or 8-byte load at
+   # any offset inside an older 8-, 16- or 32-byte store forwards with the same latency as at offset 0 (e.g. 'mov [rsi+256], rax;
+   # add eax, [rsi+260]': 8.2 cycles per iteration, before: independent, 1.0); forwarding into an xmm register takes 2 cycles more,
+   # into a ymm register 3 ('vmovdqu [rsi+256], ymm0; vpaddd ymm0, ymm0, [rsi+256]': 11.0). With these, all 27 probes are within 1 cycle.
+   storeForwardOverlap = True,
+   vectorStoreForwardDelay = (2, 3),
+   # perf, Ryzen 7 7735U (round 11): loads whose forwarding fails are a throughput cost: four 4-byte stores, then a 16-byte load of
+   # them, not on a carried chain: 1, 2, 4 such loads per iteration take 19.0, 38.0, 78.9 cycles (before: 2, 4, 8; now 19, 38, 76);
+   # an older independent 30-cycle chain does not delay them (30, 39, 88; now 30, 38, 76)
+   storeForwardFailInterval = 19,
    # perf, Ryzen 7 7735U: two stores per cycle only if they write to the same cache line ('mov [rsi], rax; mov [rsi+8], rax': 1 cycle per
    # iteration; [rsi] and [rsi+64]: 2 cycles; four stores to different lines: 4 cycles)
    storeLineRestrictedPorts = 't',
