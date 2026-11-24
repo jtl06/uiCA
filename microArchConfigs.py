@@ -11,7 +11,9 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, domainBypassDelay=0, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, domainBypassDelay=0, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0,
+                vecRegFileSize=None, gprRegFileSize=None, vecRegFreeDelay=0, gprRegFreeDelay=0, storeForwardOverlap=False, vectorStoreForwardDelay=None,
+                storeForwardFailInterval=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -113,6 +115,25 @@ class MicroArchConfig:
       # if > 0: additional latency when a vector instruction of the floating-point domain reads a value of the integer domain or vice
       # versa (see vectorDomain in uiCA.py)
       self.domainBypassDelay = domainBypassDelay
+      # Register files (None: no limit). At most vecRegFileSize macro-ops that write a vector register (XMM/YMM/ZMM/MM), and at most
+      # gprRegFileSize that write a general-purpose register, are in flight (issued and their register not yet freed); eliminated moves
+      # do not count. A register is freed when its macro-op retires, and can be allocated again vecRegFreeDelay
+      # (gprRegFreeDelay) cycles later. Issue stops
+      # when a full issue group would not fit (as for RBWidth). The size is the number of physical registers minus those that hold the
+      # architectural state.
+      self.vecRegFileSize = vecRegFileSize
+      self.gprRegFileSize = gprRegFileSize
+      self.vecRegFreeDelay = vecRegFreeDelay
+      self.gprRegFreeDelay = gprRegFreeDelay
+      # if True: a load whose first byte lies inside an older store with the same base, index and scale but another displacement reads
+      # from that store (forwarded with the normal delay if it fits in the rest of the store, else a forwarding failure); otherwise such a
+      # load is independent of the store
+      self.storeForwardOverlap = storeForwardOverlap
+      # (xmm, ymm): additional forwarding delay when the load's instruction writes a 128-bit (or narrower) or a 256-bit vector register
+      self.vectorStoreForwardDelay = vectorStoreForwardDelay
+      # if > 0: loads whose forwarding fails are handled one at a time: each one's value is ready no earlier than this many cycles after
+      # the previous failing load's
+      self.storeForwardFailInterval = storeForwardFailInterval
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property

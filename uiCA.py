@@ -69,7 +69,8 @@ def vectorDomain(instrStr):
 # and objects without a __dict__ are smaller and have faster attribute access.
 class Uop:
    __slots__ = ('idx', 'prop', 'instrI', 'fusedUop', 'actualPort', 'eliminated', 'renamedInputOperands', 'renamedOutputOperands', 'storeBufferEntry',
-                'memRenamingBlocked', 'foldedInputs', 'forwardFails', 'latReducedDueToFastPtrChasing', 'readyForDispatch', 'dispatched', 'executed')
+                'memRenamingBlocked', 'foldedInputs', 'forwardFails', 'latReducedDueToFastPtrChasing', 'readyForDispatch', 'dispatched', 'executed',
+                'failSerial')
    idx_iter = count()
 
    def __init__(self, prop, instrI):
@@ -85,6 +86,7 @@ class Uop:
       self.memRenamingBlocked = False # see MicroArchConfig.memRenamingWidths
       self.foldedInputs = None # renamed input operands that the instruction gets later (MicroArchConfig.foldedShiftDelay)
       self.forwardFails = False # the load is wider than the store it reads from
+      self.failSerial = None # MicroArchConfig.storeForwardFailInterval: [ready cycle of the previous failing load, interval]
       self.latReducedDueToFastPtrChasing = False
       self.readyForDispatch = None
       self.dispatched = None
@@ -142,7 +144,7 @@ class StackSyncUop(Uop):
 
 
 class StoreBufferEntry:
-   __slots__ = ('abstractAddress', 'uops', 'addressReadyCycle', 'dataReadyCycle', 'width', 'renamable')
+   __slots__ = ('abstractAddress', 'uops', 'addressReadyCycle', 'dataReadyCycle', 'width', 'renamable', 'seq')
 
    def __init__(self, abstractAddress):
       self.abstractAddress = abstractAddress # (base, index, scale, disp)
@@ -151,6 +153,7 @@ class StoreBufferEntry:
       self.dataReadyCycle = None
       self.width = None # width of the store (bits)
       self.renamable = True # see MicroArchConfig.memRenamingWidths
+      self.seq = 0 # order of the stores (MicroArchConfig.storeForwardOverlap)
 
 class RenamedOperand:
    __slots__ = ('nonRenamedOperand', 'uop', '__ready')
@@ -188,6 +191,11 @@ class RenamedOperand:
          if self.uop.forwardFails:
             memReady += self.uop.prop.forwardFailDelay
          self.__ready = max(self.uop.dispatched + lat, memReady)
+         fs = self.uop.failSerial
+         if fs is not None:
+            if fs[0] is not None:
+               self.__ready = max(self.__ready, fs[0] + fs[1])
+            fs[0] = self.__ready
       else:
          self.__ready = self.uop.dispatched + lat
 
@@ -229,6 +237,9 @@ class Renamer:
 
       self.curStoreBufferEntry = None
       self.storeBufferEntryDict = {}
+      self.storeBufferByBase = {} # (base, index, scale) -> {displacement: entry} (MicroArchConfig.storeForwardOverlap)
+      self.storeSeq = 0
+      self.failSerial = [None, uArchConfig.storeForwardFailInterval]
       self.foldedWidth = {} # register -> width of the operation if its value was computed by the renamer (renameImmediateFolding)
       self.curInstrFoldedWidth = {}
 
@@ -329,6 +340,10 @@ class Renamer:
                      self.curStoreBufferEntry = StoreBufferEntry(key)
                      self.storeBufferEntryDict[key] = self.curStoreBufferEntry
                      sbe = self.curStoreBufferEntry
+                     if self.uArchConfig.storeForwardOverlap and key is not None:
+                        self.storeSeq += 1
+                        sbe.seq = self.storeSeq
+                        self.storeBufferByBase.setdefault(key[:3], {})[key[3] or 0] = sbe
                      sbe.width = memWidth(uop.prop.instr.instrStr)
                      self.absValGen.recordStore(key, uop.prop.instr)
                      if self.uArchConfig.memRenamingWidths and (sbe.width not in self.uArchConfig.memRenamingWidths):
@@ -354,10 +369,20 @@ class Renamer:
                                                                                        (baseEntry and baseEntry.renamedByElim32BitMove))
                      uop.storeBufferEntry = self.storeBufferEntryDict.get(key, None)
                      sbe = uop.storeBufferEntry
-                     if (sbe is not None) and sbe.width and (memWidth(uop.prop.instr.instrStr) or 0) > sbe.width:
+                     overlapOffset = 0
+                     if self.uArchConfig.storeForwardOverlap and key is not None:
+                        # the most recent store whose bytes contain the load's first byte (MicroArchConfig.storeForwardOverlap)
+                        d = key[3] or 0
+                        for ds, e in self.storeBufferByBase.get(key[:3], {}).items():
+                           if e.width and ds < d < ds + e.width // 8 and (sbe is None or e.seq > sbe.seq):
+                              sbe, overlapOffset = e, d - ds
+                        uop.storeBufferEntry = sbe
+                     if (sbe is not None) and sbe.width and (memWidth(uop.prop.instr.instrStr) or 0) > sbe.width - 8 * overlapOffset:
                         uop.forwardFails = True
+                     if uop.forwardFails and self.uArchConfig.storeForwardFailInterval:
+                        uop.failSerial = self.failSerial
                      if (sbe is not None) and self.uArchConfig.memRenamingWidths:
-                        uop.memRenamingBlocked = (not sbe.renamable) or ((memWidth(uop.prop.instr.instrStr) or 0) > (sbe.width or 0))
+                        uop.memRenamingBlocked = (not sbe.renamable) or ((memWidth(uop.prop.instr.instrStr) or 0) > (sbe.width or 0)) or (overlapOffset > 0)
 
                   prop = uop.prop
                   if prop.renameKeys is None:
@@ -963,14 +988,35 @@ class ReorderBuffer:
       self.uops = deque()
       self.retireQueue = retireQueue
       self.uArchConfig = uArchConfig
+      # register files (MicroArchConfig.vecRegFileSize, gprRegFileSize): registers allocated, and registers freed at a later cycle
+      self.regFiles = (uArchConfig.vecRegFileSize is not None) or (uArchConfig.gprRegFileSize is not None)
+      self.nVecRegs = 0
+      self.nGPRRegs = 0
+      self.pendingFrees = [] # heap of (cycle from which the registers can be allocated, vector registers, general-purpose registers)
+      self.regKinds = {} # fused uop -> (vector registers, general-purpose registers)
+      self.clock = -1
 
    def isEmpty(self):
       return not self.uops
 
    def isFull(self):
-      return len(self.uops) + self.uArchConfig.issueWidth > self.uArchConfig.RBWidth
+      w = self.uArchConfig.issueWidth
+      if len(self.uops) + w > self.uArchConfig.RBWidth:
+         return True
+      if self.regFiles:
+         c = self.clock + 1 # the cycle in which the next uops would be issued
+         while self.pendingFrees and self.pendingFrees[0][0] <= c:
+            _, v, g = heappop(self.pendingFrees)
+            self.nVecRegs -= v
+            self.nGPRRegs -= g
+         if (self.uArchConfig.vecRegFileSize is not None) and (self.nVecRegs + w > self.uArchConfig.vecRegFileSize):
+            return True
+         if (self.uArchConfig.gprRegFileSize is not None) and (self.nGPRRegs + w > self.uArchConfig.gprRegFileSize):
+            return True
+      return False
 
    def cycle(self, clock, newUops):
+      self.clock = clock
       self.retireUops(clock)
       self.addUops(clock, newUops)
 
@@ -986,12 +1032,35 @@ class ReorderBuffer:
             fusedUop.retired = clock
             fusedUop.retireIdx = nRetiredInSameCycle
             nRetiredInSameCycle += 1
+            if self.regFiles:
+               v, g = self.regKinds.pop(fusedUop, (0, 0))
+               if v:
+                  heappush(self.pendingFrees, (clock + 1 + self.uArchConfig.vecRegFreeDelay, v, 0))
+               if g:
+                  heappush(self.pendingFrees, (clock + 1 + self.uArchConfig.gprRegFreeDelay, 0, g))
          else:
             break
 
    def addUops(self, clock, newUops):
       for fusedUop in newUops:
          self.uops.append(fusedUop)
+         if self.regFiles:
+            v = g = 0
+            for uop in fusedUop.getUnfusedUops():
+               if uop.eliminated:
+                  continue
+               for op in uop.prop.outputOperands:
+                  r = getattr(op, 'reg', None)
+                  if r is None:
+                     continue
+                  if 'MM' in r:
+                     v = 1
+                  elif not r.startswith(('K', 'ST', 'TMM')) and r not in ('RFLAGS', 'RIP', 'MXCSR', 'X87CONTROL', 'X87STATUS', 'X87TAG'):
+                     g = 1
+            if v or g:
+               self.regKinds[fusedUop] = (v, g)
+               self.nVecRegs += v
+               self.nGPRRegs += g
          for uop in fusedUop.getUnfusedUops():
             if (not uop.prop.possiblePorts) or uop.eliminated:
                uop.executed = clock
@@ -1416,6 +1485,10 @@ def computeUopProperties(instructions: List[Instr], uArchConfig: MicroArchConfig
                                          or [uArchConfig.loadLatency])
          loadUopProps.append(UopProperties(instr, pc, inputOperands, outputOperands, uopLatencies, isLoadUop=True, memAddr=memAddr))
          loadUopProps[-1].forwardDelay = uArchConfig.storeForwardDelay
+         if uArchConfig.vectorStoreForwardDelay:
+            vecOut = [op.reg for op in instr.outputRegOperands if 'MM' in op.reg]
+            if vecOut:
+               loadUopProps[-1].forwardDelay += uArchConfig.vectorStoreForwardDelay[1 if any(r.startswith(('YMM', 'ZMM')) for r in vecOut) else 0]
          loadUopProps[-1].forwardFailDelay = uArchConfig.storeForwardFailDelay
          if (uArchConfig.loadOpForwardDelay is not None) and nonMemPcs and (not instr.outputMemOperands):
             loadUopProps[-1].forwardDelay = uArchConfig.loadOpForwardDelay
