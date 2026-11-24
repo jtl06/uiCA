@@ -70,8 +70,19 @@ INSTR_CORRECTIONS = {
       'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'CMPXCHG8B (M64)': {'TP_MS': 13},
-      'SHA256RNDS2 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 4}}, 'SHA256RNDS2 (XMM, M128)': {'lat': {('REG0', 'REG0'): 4}},
-      'SHA256MSG1 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 7}}, 'SHA256MSG1 (XMM, M128)': {'lat': {('REG0', 'REG0'): 8}},
+      # perf, Xeon Gold 6314U (round 11, ICX real-loop diagnosis; generated loops of one form, 12 independent copies, without xmm0 for
+      # the forms with an implicit xmm0): SHA256RNDS2 and SHA1RNDS4 3.00 cycles per instruction (RKL data 1.25 / 1.00), SHA256MSG1 5.09
+      # (4.08); VEX blends with a register mask 1.00 (0.67; 2 uops spread over p0/p1/p5); 512-bit stores to one line 1.00 (0.50);
+      # 512-bit loads 0.89 (0.50)
+      'SHA1RNDS4 (XMM, XMM, I8)': {'TP_MS': 3.0},
+      'VBLENDVPS (YMM, YMM, YMM, YMM)': {'TP_MS': 1.0}, 'VBLENDVPS (XMM, XMM, XMM, XMM)': {'TP_MS': 1.0},
+      'VBLENDVPD (YMM, YMM, YMM, YMM)': {'TP_MS': 1.0}, 'VPBLENDVB (YMM, YMM, YMM, YMM)': {'TP_MS': 1.0},
+      'VPBLENDVB (XMM, XMM, XMM, XMM)': {'TP_MS': 1.0}, 'VBLENDVPS (YMM, YMM, M256, YMM)': {'TP_MS': 1.0},
+      'VMOVDQU32 (M512, ZMM)': {'TP_MS': 1.0}, 'VMOVDQU64 (M512, ZMM)': {'TP_MS': 1.0}, 'VMOVUPS (M512, ZMM)': {'TP_MS': 1.0},
+      'VMOVUPS (ZMM, M512)': {'TP_MS': 0.89}, 'VMOVDQU8 (ZMM, M512)': {'TP_MS': 0.89}, 'VMOVDQA64 (ZMM, M512)': {'TP_MS': 0.89},
+      'VPANDD (ZMM, ZMM, M512)': {'TP_MS': 0.89},
+      'SHA256RNDS2 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 4}, 'TP_MS': 3.0}, 'SHA256RNDS2 (XMM, M128)': {'lat': {('REG0', 'REG0'): 4}},
+      'SHA256MSG1 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 7}, 'TP_MS': 5.0}, 'SHA256MSG1 (XMM, M128)': {'lat': {('REG0', 'REG0'): 8}},
    },
 }
 
