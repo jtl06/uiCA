@@ -543,3 +543,10 @@ MicroArchConfigs['ICX'].vecRegFreeDelay = 10
 MicroArchConfigs['ICX'].storeForwardOverlap = True
 MicroArchConfigs['ICX'].vectorStoreForwardDelay = (0, 1)
 MicroArchConfigs['ICX'].storeForwardFailInterval = 18
+# Round 11 (perf, Xeon Gold 6314U, 26 move-elimination probes plus 25 of the diagnosis; uops executed): in loops that take a whole
+# number of cycles, the number of eliminable moves that execute per iteration depends only on how many there are (0 for 1-3, 1 for 4-8,
+# 2 for 10 and 12), not on their sources, destinations, width (GPR, xmm, ymm), spacing or the loop length: exactly the moves that the
+# renamer sees in the fourth slot (index 3) of its 5-wide group, the groups starting at the iteration's first uop. In the model's issue
+# groups (the loop stream detector unrolls small loops, the hardware does not) index 3 reproduces 17 of 51 probes' executed moves
+# (index 4: 30; none: 6).
+MicroArchConfigs['ICX'].moveElimBlockedSlots = (3,)
