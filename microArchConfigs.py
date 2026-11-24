@@ -536,3 +536,10 @@ MicroArchConfigs['ICX'].splitLoadCycles = 2
 # onset at 176 fillers (88.0 at 160) and is an upper bound; the other 16 registers held are not explained.
 MicroArchConfigs['ICX'].vecRegFileSize = 176
 MicroArchConfigs['ICX'].vecRegFreeDelay = 10
+# Round 11 (perf, Xeon Gold 6314U, forwarding probes): a 1/2/4-byte load at an offset inside an older 8- or 16-byte store forwards with
+# the latency of an exact match (5 cycles per chain; before: independent, 1); into ymm 1 cycle more than into xmm or a GPR (6 against 5);
+# a 16-byte load of four 4-byte stores costs 18 cycles of throughput per failing load (1, 2, 4 per iteration: 18.0, 36.0, 72.0; before
+# 2, 4, 8; now 18, 36, 72). Not modeled: zmm (7.7).
+MicroArchConfigs['ICX'].storeForwardOverlap = True
+MicroArchConfigs['ICX'].vectorStoreForwardDelay = (0, 1)
+MicroArchConfigs['ICX'].storeForwardFailInterval = 18
