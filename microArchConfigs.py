@@ -407,6 +407,10 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # and 10, 123 -> 131 within 10 % (MAPE 12.1 -> 9.5 %).
    branchPorts = 'aq',
    fusedALUBranchPorts = 'a',
+   # SOG 19h, 2.8.5: CMP/TEST with a memory operand and the reg/mem forms of the fusible instructions fuse with a following Jcc;
+   # retired macro-ops (perf, Ryzen 7 7735U, real-loop diagnosis): 29 development loops with 'cmp'/'test' with a memory operand + Jcc
+   # retire one macro-op fewer per iteration than the model had
+   amdBranchFusionRules = True,
    sameRegMoveEliminated = True, # perf, Ryzen 7 7735U (microbench SET=movs): 'mov r11d, r11d; sub r11, r12' runs at 1 cycle per iteration
    loadPorts = 'ghi',
    storeAddrPorts = 'yz', # virtual ports for the store-address uops of read-modify-write instructions; see convertXML.py
