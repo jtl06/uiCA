@@ -276,7 +276,9 @@ class Renamer:
       nGPRMoveElim = 0
       nSIMDMoveElim = 0
 
-      for fusedUop in renamerUops:
+      for slot, fusedUop in enumerate(renamerUops):
+         if slot in self.uArchConfig.moveElimBlockedSlots:
+            continue # MicroArchConfig.moveElimBlockedSlots
          for uop in fusedUop.getUnfusedUops():
             if uop.prop.instr.mayBeEliminated and (not uop.prop.isRegMergeUop) and (not isinstance(uop, StackSyncUop)):
                canonicalInpReg = getCanonicalReg(uop.prop.instr.inputRegOperands[0].reg)
@@ -515,6 +517,7 @@ class FrontEnd:
       self.addressesInDSB = set()
 
       self.LSDUnrollCount = 1
+      self.nextLSDDelivery = 0 # MicroArchConfig.lsdLineDelivery
 
       if simpleFrontEnd:
          self.uopSource = None
@@ -624,10 +627,16 @@ class FrontEnd:
                   for uop in lamUop.getUnfusedUops():
                      self.IDQ.append(LaminatedUop([FusedUop([uop])]))
       elif self.uopSource == 'LSD':
-         if not self.IDQ:
+         if (not self.IDQ) and ((not self.uArchConfig.lsdLineDelivery) or (clock >= self.nextLSDDelivery)):
+            nLines = 0
             for _ in range(0, self.LSDUnrollCount):
+               lines = set() # the 64-byte lines that the bytes of the loop body touch
                for cacheBlock in next(self.cacheBlocksForNextRoundGenerator):
                   self.addNewCacheBlock(cacheBlock)
+                  for instrI in cacheBlock:
+                     lines.update(range(instrI.address // 64, (instrI.address + len(instrI.instr.opcode) // 2 - 1) // 64 + 1))
+               nLines += len(lines)
+            self.nextLSDDelivery = clock + nLines
       else:
          # add new cache blocks
          while len(self.DSB.DSBBlockQueue) < 2 and len(self.preDecoder.B16BlockQueue) < 4:

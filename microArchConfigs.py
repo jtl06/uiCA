@@ -13,7 +13,8 @@ class MicroArchConfig:
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
                 loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, domainBypassDelay=0, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0,
                 vecRegFileSize=None, gprRegFileSize=None, vecRegFreeDelay=0, gprRegFreeDelay=0, storeForwardOverlap=False, vectorStoreForwardDelay=None,
-                storeForwardFailInterval=0, branchPorts=None, fusedALUBranchPorts=None, amdBranchFusionRules=False):
+                storeForwardFailInterval=0, branchPorts=None, fusedALUBranchPorts=None, amdBranchFusionRules=False,
+                moveElimBlockedSlots=(), lsdLineDelivery=False):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -144,6 +145,11 @@ class MicroArchConfig:
       # immediate and a displacement or uses RIP-relative addressing, or if the two instructions are longer than 15 bytes together; INC
       # and DEC are not fused with branches that depend on CF. If False, instructions with a memory operand are not fused.
       self.amdBranchFusionRules = amdBranchFusionRules
+      # positions in the issue (rename) group, counted from 0, in which an eliminable move is not eliminated (it executes)
+      self.moveElimBlockedSlots = moveElimBlockedSlots
+      # if True: a loop delivered by the loop stream detector is delivered at most one 64-byte line per cycle (the uops of the next
+      # iterations enter the IDQ no earlier than one cycle per line of the previous delivery after it)
+      self.lsdLineDelivery = lsdLineDelivery
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property
