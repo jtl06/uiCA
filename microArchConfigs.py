@@ -11,7 +11,7 @@ class MicroArchConfig:
                 storeDataPorts='49', fusiblePorts='237', dividerPort='0', loadLatency=5, portNames=None, experimental=False, portAssignment=None,
                 renameImmediateFolding=False, takenBranchPort=None, memoryRenaming=None, sameRegMoveEliminated=False, loadLineSlots=None, dataFrom=None, storeForwardDelay=4, storeLineRestrictedPorts='', narrowStorePenalty=0, opCacheEntryOps=0, simpleRMWForwardDelay=0, rmwForwardDelay=None, vectorStoreDataPorts='', opCacheEntryFields=0, opCacheMaxFields=0, memRenamingWidths=None,
                 memRenamingExcluded=(), memRenamingFoldedCheck=False, storeForwardFailDelay=0,
-                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0):
+                loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, domainBypassDelay=0, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -110,6 +110,9 @@ class MicroArchConfig:
       # non-scheduling queue (they are not dispatched before they enter the scheduler)
       self.fpSchedulerSize = fpSchedulerSize
       self.fpSchedulerPorts = fpSchedulerPorts
+      # if > 0: additional latency when a vector instruction of the floating-point domain reads a value of the integer domain or vice
+      # versa (see vectorDomain in uiCA.py)
+      self.domainBypassDelay = domainBypassDelay
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property
@@ -331,6 +334,12 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    microcodeOps = 2,
    microcodeWidth = 4,
    microcodeNextEntryOps = 4,
+   # perf, Ryzen 7 7735U (microbench lb/r10b.txt): a vector value that passes between the integer domain (vpaddd, vpalignr, ...) and the
+   # floating-point domain (vmaxps, vandps, vmulps, FMA, ...) arrives one cycle later in each direction: chains of 4 alternating
+   # 'vpaddd'/'vmaxps', 'vpalignr'/'vmaxps' or 'vpalignr'/'vandps' take 8.0 cycles per iteration, 4 of one kind 4.0; integer shuffles,
+   # shifts, blends and multiplies next to vpaddd: no delay. vperm2i128 forms a domain of its own ('vperm2i128' + 'vpaddd' twice: 12.95,
+   # latencies 3 + 1; 'vperm2i128' alone: 3). Loads, stores and moves have no domain.
+   domainBypassDelay = 1,
    # perf, Ryzen 7 7735U (microbench lb/r9b.txt): a chain of K FMAs per iteration (independent iterations) takes 4.05, 5.07, 6.48, 10.09
    # and 18.86 cycles per iteration for K = 8, 10, 12, 16, 24 (latency 4, two FMA pipes: K/2 without a limit on the uops that wait): about
    # 56 FP uops wait in the scheduler, younger ones in the non-scheduling queue

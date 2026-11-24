@@ -8,6 +8,7 @@ import re
 import sys
 from collections import Counter, deque, namedtuple, OrderedDict
 from concurrent import futures
+from functools import lru_cache
 from heapq import heappop, heappush
 from itertools import count, repeat
 from operator import attrgetter
@@ -50,6 +51,19 @@ class UopProperties:
 
    def __str__(self):
       return 'UopProperties(ports: {}, in: {}, out: {}, lat: {})'.format(self.possiblePorts, self.inputOperands, self.outputOperands, self.latencies)
+
+@lru_cache(maxsize=None)
+def vectorDomain(instrStr):
+   # 'int' for vector integer instructions (P..., VP...), 'fp' for floating-point operations (..PS/PD/SS/SD, FMA), None otherwise
+   # (moves, loads, stores, conversions between register files; see MicroArchConfig.domainBypassDelay)
+   m = instrStr.split(' ')[0]
+   if not ('XMM' in instrStr or 'YMM' in instrStr): return None
+   if m.startswith('V'): m = m[1:]
+   if m.startswith('MOV') or m.startswith('BROADCAST') or m.startswith('EXTRACT') or m.startswith('INSERT') or m.startswith('CVT'): return None
+   if m.startswith('PERM2'): return 'xlane'
+   if m.startswith('P'): return 'int'
+   if m.endswith(('PS', 'PD', 'SS', 'SD')) or m.startswith(('FMADD', 'FMSUB', 'FNMADD', 'FNMSUB')): return 'fp'
+   return None
 
 # The classes for uops and instruction instances use __slots__: there are many of them (all are kept until the end of the simulation),
 # and objects without a __dict__ are smaller and have faster attribute access.
@@ -1301,6 +1315,11 @@ class Scheduler:
             return None
          if (uop.foldedInputs is not None) and any(o is renInpOp for o in uop.foldedInputs):
             r += getFoldedInputDelay(uop.prop.instr, self.uArchConfig)
+         if self.uArchConfig.domainBypassDelay and (renInpOp.uop is not None) and (not renInpOp.uop.prop.isLoadUop) and (not uop.prop.isStoreDataUop):
+            dp = vectorDomain(renInpOp.uop.prop.instr.instrStr)
+            dc = vectorDomain(uop.prop.instr.instrStr)
+            if dp and dc and (dp != dc):
+               r += self.uArchConfig.domainBypassDelay
          if r > opReadyCycle:
             opReadyCycle = r
 
