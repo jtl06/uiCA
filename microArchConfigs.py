@@ -529,3 +529,10 @@ MicroArchConfigs['ICX'].rotateCarryRMWForwardDelay = 4
 # 8- or 32-byte loads per iteration: 4.00 cycles, 8: 8.00; 32-byte loads at 4-byte offsets from a pointer that advances by 32: 6.00,
 # predicted 6.00); the latency is 6 cycles longer (not modeled)
 MicroArchConfigs['ICX'].splitLoadCycles = 2
+# Round 11 (perf, Xeon Gold 6314U, ICX real-loop diagnosis; window probes: two independent 88-cycle vmulpd chains separated by N
+# fillers that write ymm registers): flat up to N = 144, 106.7 cycles at N = 160, then about 0.2 cycles per filler. 176 in-flight vector
+# writers with registers reusable 10 cycles after retirement (the ZEN3 mechanism) reproduce the onset (108.0 at 160) and the slope
+# (127.0 / 152.5 at 256 / 384, measured 128.6 / 154.0); the documented file (224 registers; 192 beyond the 32 architectural zmm) puts the
+# onset at 176 fillers (88.0 at 160) and is an upper bound; the other 16 registers held are not explained.
+MicroArchConfigs['ICX'].vecRegFileSize = 176
+MicroArchConfigs['ICX'].vecRegFreeDelay = 10
