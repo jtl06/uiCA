@@ -366,6 +366,15 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    # 56 FP uops wait in the scheduler, younger ones in the non-scheduling queue
    fpSchedulerSize = 56,
    fpSchedulerPorts = 'klmnop',
+   # perf, Ryzen 7 7735U (round 11, window probes: two independent 60-cycle chains of 20 'vmulpd' separated by N instructions that write
+   # vector registers): flat up to N = 112, then a jump of 12 cycles at N = 116 and about 1 cycle per 4 more, with ymm or xmm
+   # destinations, with or without vector loads among them. 144 in-flight writers reproduce the onset (consistent with 160 physical
+   # registers minus the 16 architectural YMM registers; the Software Optimization Guide gives no FP register count); a register
+   # freed at retirement that can be allocated again only 10 cycles later reproduces the jump and the slope, also for chains of 10
+   # and 30 (mean error per probe group, 5 groups of 13-23 probes: 1.4-3.6 %; without the
+   # delay 8-18 %; delays 8 / 12: 1.1-6.7 / 2.2-3.6 %). Fillers that are all vector loads cost more than modeled (9 %, unexplained).
+   vecRegFileSize = 144,
+   vecRegFreeDelay = 10,
    # perf, Ryzen 7 7735U (microbench lb/r9a.txt): a 32-byte load that crosses a 64-byte line occupies its load port for 2 cycles (4 such
    # loads per iteration: 3.96 cycles, 8: 7.97; 'vmovups ymm, [rdi+4k]' for k = 0..7 from a pointer that advances by 32, 3.5 crossing
    # loads per iteration: 6.00, predicted 5.78); also 8- and 16-byte loads (6 crossing 8-byte loads: 4.03); the latency is 1 cycle longer
