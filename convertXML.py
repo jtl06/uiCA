@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 import shutil
 import xml.etree.ElementTree as ET
 from collections import defaultdict
@@ -92,6 +93,22 @@ INSTR_CORRECTIONS = {
       'SHA256MSG1 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 7}, 'TP_MS': 5.0}, 'SHA256MSG1 (XMM, M128)': {'lat': {('REG0', 'REG0'): 8}},
    },
 }
+
+# ICX: 512-bit FP add/sub/mul/FMA (min/max by analogy) and VPMULLQ run on ports 0 and 5 (the server core's second 512-bit unit;
+# perf, Xeon Gold 6314U, round 11: 12 independent vfmadd231ps / vaddps zmm 6.0 cycles, RKL data 12.0; vpmullq zmm 1.5 cycles, 1.5
+# uops on each of p0 and p5)
+ZMM_PORT5_ARCHS = {'ICX'}
+ZMM_PORT5_RE = re.compile(r'^V(FN?M(ADD|SUB)(132|213|231)?(SUB|ADD)?(PS|PD)|ADDPS|ADDPD|SUBPS|SUBPD|MULPS|MULPD|MINPS|MINPD|MAXPS|MAXPD|PMULLQ)(_Z)? ')
+
+def applyZmmPort5(arch, instrString, perfData):
+   if arch not in ZMM_PORT5_ARCHS or 'ZMM' not in instrString or not ZMM_PORT5_RE.match(instrString):
+      return perfData
+   ports = perfData.get('ports', {})
+   if '0' not in ports or any('5' in p for p in ports):
+      return perfData
+   perfData = dict(perfData)
+   perfData['ports'] = {('05' if p == '0' else p): n for p, n in ports.items()}
+   return perfData
 
 def applyInstrCorrections(arch, instrString, perfData):
    c = INSTR_CORRECTIONS.get(arch, {}).get(instrString)
@@ -471,7 +488,7 @@ def main():
       if cfg.dataFrom and (cfg.dataFrom in instrDataForArch):
          # e.g., ICX uses the data of RKL
          corrections = DATA_FROM_LATENCY_CORRECTIONS.get(name)
-         if not corrections and not INSTR_CORRECTIONS.get(name):
+         if not corrections and not INSTR_CORRECTIONS.get(name) and name not in ZMM_PORT5_ARCHS:
             shutil.copyfile(os.path.join(path, cfg.dataFrom + '_data.py'), os.path.join(path, name + '_data.py'))
             instrDataForArch[name] = instrDataForArch[cfg.dataFrom]
             perfDataForArch[name] = perfDataForArch[cfg.dataFrom]
@@ -482,6 +499,11 @@ def main():
             for d in l:
                if d['string'] in INSTR_CORRECTIONS.get(name, {}):
                   pd = applyInstrCorrections(name, d['string'], perfDataForArch[name][d['perfData']])
+                  d['perfData'] = len(perfDataForArch[name])
+                  perfDataForArch[name].append(pd)
+               pd0 = perfDataForArch[name][d['perfData']]
+               pd = applyZmmPort5(name, d['string'], pd0)
+               if pd is not pd0:
                   d['perfData'] = len(perfDataForArch[name])
                   perfDataForArch[name].append(pd)
             delta = (corrections or {}).get(iform.split('_')[0])
