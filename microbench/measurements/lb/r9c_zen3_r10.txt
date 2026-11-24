@@ -1,0 +1,11 @@
+# r9c on zen3 (ZEN3): loop, measured, predicted by 5a07a40 (round 9), predicted by improve-r10
+c_br1           1.00    1.00    1.00
+c_br2           1.50    1.50    1.50
+c_br3           2.00    2.00    2.00
+c_br3c          2.00    2.00    2.00
+c_br2c          1.50    1.50    1.50
+c_br2a          1.50    1.50    1.50
+c_br1a          1.54    1.50    1.50
+c_br4c          2.50    2.50    2.50
+ZEN3         r9c_zen3.txt:       8       8
+within 10%: 8 of 8 within 10% -> 8 of 8 within 10%

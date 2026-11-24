@@ -1,0 +1,21 @@
+# r10c on zen3 (ZEN3): loop, measured, predicted by 5a07a40 (round 9), predicted by improve-r10
+u_full          7.33    5.20    5.16
+u_noperm2       5.74    5.00    5.00
+u_nopermq       5.59    4.51    4.56
+u_noshufd       5.58    3.72    3.78
+u_nosrl         5.51    3.71    3.77
+u_shuf          4.21    3.00    2.99
+u_shufi         3.70    3.00    3.00
+u_perm2shuf     2.41    2.00    2.00
+u_permqshuf     2.58    2.50    2.50
+u_perm2x4       4.01    4.00    4.00
+u_unpck4        2.00    2.00    2.00
+u_srld4         2.00    2.00    2.00
+u_srld4s        4.00    4.00    4.00
+w_full          4.20    3.35    3.32
+w_nopermd       3.10    2.52    2.56
+w_noperm2       3.55    2.83    2.83
+w_nostore       4.13    3.32    3.38
+w_chain        10.74   10.00   10.00
+ZEN3         r10c_zen3.txt:       6       6
+within 10%: 6 of 18 within 10% -> 6 of 18 within 10%
