@@ -56,6 +56,41 @@ that did not fail before is byte-identical.
 
 L1-resident data only; no cache misses or branch mispredictions.
 
+### Round 11: ZEN3 against real hot loops (`improve-r11`)
+
+Development data: the development split of a benchmark of real hot loops (961 loops from 112 libraries measured in
+situ on the Ryzen 7 7735U; the held-out split was not used). Mechanisms come from AMD's Software Optimization Guide
+for family 19h (SOG) and from microbenchmarks that isolate them; the development split is a check, not a fitting
+target. Every new behavior is a `MicroArchConfig` parameter whose default keeps the previous behavior: with the
+defaults, the fixture export of all other configurations is byte-identical to `improve-r10`'s.
+
+| Step (ZEN3) | Commit | Source | Dev ≤10 % (per library) | per loop | MAPE |
+|---|---|---|---:|---:|---:|
+| round 10 | `7301b04` | | 58.5 % | 55.3 % | 12.3 % |
+| vector register file: 144 in flight, reusable 10 cycles after retirement | `c382a3a` | window probes | 68.6 % | 66.3 % | 10.0 % |
+| store forwarding at an offset, into vector registers (+2/+3), failures 19 cycles apart | `9d5b07e` | 27 forwarding probes, failed-forwarding probes | 69.5 % | 67.1 % | 9.7 % |
+| branches on ALU0 and the branch unit; fused register-writing pairs on ALU0 | `18affdd` | SOG 2.10.2, loop benchmarks r9b/r9c | | | |
+| branch fusion of memory forms | `b08fbe8` | SOG 2.8.5, retired macro-ops | 70.9 % | 68.4 % | 8.8 % |
+| MUL/MULX throughput, VCVTSD2SS/SS2SD merge latency, lane-crossing latencies | `b723d05`, `3929854`, `6c0f612` | single-instruction loops | 70.9 % | 68.8 % | 8.7 % |
+
+Guards, within 10 % (round 10 -> round 11): dev13 84.3 -> 84.8, dev11 83.0 -> 83.9, holdout5 83.5 -> 83.9, bhive1
+(dev half) 89.0 -> 89.5, bhive3 88.9 -> 89.2; the accuracy table of wuica's gate: holdout7 84.6 -> 85.5, holdout8
+85.7 -> 86.3, bhive5 87.7 -> 88.3, bhive6 88.8 -> 89.1, dogfood loops 57.1 -> 81.0.
+
+Too-fast error by hardware stall class (the diagnosis's dispatch-stall counters; share of round 10's too-fast mass):
+FP register file 26.9 -> 6.1 %, store-reload interlocks 35.1 -> 19.9 %, execution-bound 20.5 -> 18.1 %, integer
+scheduler 13.3 -> 13.9 %. The too-slow mass falls from 2.97 to 1.70 (per-library weights).
+
+New generic parameters (all off by default): `vecRegFileSize`, `gprRegFileSize`, `vecRegFreeDelay`,
+`gprRegFreeDelay`, `storeForwardOverlap`, `vectorStoreForwardDelay`, `storeForwardFailInterval`, `branchPorts`,
+`fusedALUBranchPorts`, `amdBranchFusionRules`. The table corrections are entries of `INSTR_CORRECTIONS` in
+`convertXML.py`.
+
+Tried and not kept: the integer register file at the SOG's size (192 - 38 = 154; dev -0.3, holdout7 -0.4; the probe
+onset is gradual, not a step); zeroing idioms without an execution port (SOG 2.9.2, measured 0.18-0.22 cycles each;
+dev -0.9, some loops became twice as slow, a side effect not understood). Not changed: the macro-op count of `mul
+m64` / `mulx r64, r64, m64` (measured 3, model 2; 3 would make them microcoded under the op-cache rule).
+
 ## 3. Validation harness (`microbench/`)
 
 - `microbench/fuzz/`: random-loop generator, perf measurement, scoring (`fuzz_report.py`), held-out sets.
