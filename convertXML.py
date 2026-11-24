@@ -40,6 +40,16 @@ INSTR_CORRECTIONS = {
       'VROUNDSS (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}},
       'VROUNDSS (XMM, XMM, M32, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, M64, I8)': {'lat': {('REG1', 'REG0'): 3}},
       'CVTPI2PD (XMM, M64)': {'TP': 3.0},
+      # perf, Ryzen 7 7735U (ZEN3 real-loop diagnosis, chains of 8 through each source): vinserti128/vinsertf128 1.73 (uops.info: 1),
+      # vpbroadcastd ymm, xmm 1.72 (1), vextracti128/vextractf128 and vperm2i128/vperm2f128 3.53 (3), vpermq 6.55 (6); to the nearest cycle
+      'VINSERTI128 (YMM, YMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 2, ('REG2', 'REG0'): 2}},
+      'VINSERTF128 (YMM, YMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 2, ('REG2', 'REG0'): 2}},
+      'VINSERTI128 (YMM, YMM, M128, I8)': {'lat': {('REG1', 'REG0'): 2}}, 'VINSERTF128 (YMM, YMM, M128, I8)': {'lat': {('REG1', 'REG0'): 2}},
+      'VPBROADCASTD (YMM, XMM)': {'lat': {('REG1', 'REG0'): 2}},
+      'VEXTRACTI128 (XMM, YMM, I8)': {'lat': {('REG1', 'REG0'): 4}}, 'VEXTRACTF128 (XMM, YMM, I8)': {'lat': {('REG1', 'REG0'): 4}},
+      'VPERM2I128 (YMM, YMM, YMM, I8)': {'lat': {('REG1', 'REG0'): 4, ('REG2', 'REG0'): 4}},
+      'VPERM2F128 (YMM, YMM, YMM, I8)': {'lat': {('REG1', 'REG0'): 4, ('REG2', 'REG0'): 4}},
+      'VPERMQ (YMM, YMM, I8)': {'lat': {('REG1', 'REG0'): 7}},
       # perf, Ryzen 7 7735U (ZEN3 real-loop diagnosis): a chain through the merged (first source) operand takes 3 cycles (uops.info: 0)
       'VCVTSD2SS (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 3}}, 'VCVTSS2SD (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 3}},
       # perf, Ryzen 7 7735U (ZEN3 real-loop diagnosis, independent 'mul r13' with 'xor eax, eax' between; 'mulx' with register or
