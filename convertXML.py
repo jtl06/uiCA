@@ -70,6 +70,11 @@ INSTR_CORRECTIONS = {
       'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 14}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 14},
       'CMPXCHG8B (M64)': {'TP_MS': 13},
+      # perf, Xeon Gold 6314U (round 11): double square root (xmm) latency 18 (13), 6.0 cycles per instruction (4); vsqrtpd ymm 12 (9)
+      'SQRTSD (XMM, XMM)': {'lat': {('REG0', 'REG0'): 18, ('REG1', 'REG0'): 18}, 'divC': 6},
+      'VSQRTSD (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 18, ('REG2', 'REG0'): 18}, 'divC': 6},
+      'SQRTPD (XMM, XMM)': {'lat': {('REG1', 'REG0'): 18}, 'divC': 6}, 'VSQRTPD (XMM, XMM)': {'lat': {('REG1', 'REG0'): 18}, 'divC': 6},
+      'VSQRTPD (YMM, YMM)': {'divC': 12},
       # perf, Xeon Gold 6314U (round 11): chains through the merged operand of VCVTSD2SS 2 cycles (1), through CVTSS2SD 6 (5)
       'VCVTSD2SS (XMM, XMM, XMM)': {'lat': {('REG1', 'REG0'): 2}}, 'CVTSS2SD (XMM, XMM)': {'lat': {('REG1', 'REG0'): 6}},
       # perf, Xeon Gold 6314U (round 11, ICX real-loop diagnosis; generated loops of one form, 12 independent copies, without xmm0 for
@@ -93,7 +98,7 @@ def applyInstrCorrections(arch, instrString, perfData):
    if not c:
       return perfData
    perfData = dict(perfData)
-   for k in ('TP', 'TP_MS'):
+   for k in ('TP', 'TP_MS', 'divC'):
       if k in c:
          perfData[k] = c[k]
    if c.get('lat'):
