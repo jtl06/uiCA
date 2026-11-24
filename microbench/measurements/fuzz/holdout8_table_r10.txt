@@ -1,0 +1,19 @@
+## holdout8 ZEN3, measured on Ryzen 7 7735U (Zen 3+): 1956 loops of 2000 compared; excluded: {'unstable measurement': 32, 'no prediction from llvm-mca znver3': 12}
+   tool                              loops     <=5%    <=10%    <=20%     MAPE
+   uiCA ZEN3 (before)                 1956    76.3%    85.6%    94.7%     3.9%
+   uiCA ZEN3 (after)                  1956    76.4%    85.7%    94.8%     3.8%
+   llvm-mca znver3                    1956    43.3%    56.0%    75.9%    17.0%
+## holdout8 ADL-P, measured on Core i7-12650H P-core (Alder Lake): 1923 loops of 2000 compared; excluded: {'unstable measurement': 51, 'no prediction from llvm-mca alderlake': 26}
+   tool                              loops     <=5%    <=10%    <=20%     MAPE
+   uiCA ADL-P (before)                1923    83.8%    90.7%    97.0%     2.6%
+   uiCA ADL-P (after)                 1923    83.8%    90.7%    97.0%     2.6%
+   stock uiCA RKL                     1923    43.4%    48.0%    67.2%    17.6%
+   llvm-mca alderlake                 1923    29.3%    33.8%    44.4%    35.2%
+## holdout8 ICL, measured on Xeon Gold 6314U (Ice Lake-SP): 1867 loops of 2000 compared; excluded: {'unstable measurement': 121, 'no prediction from llvm-mca icelake-server': 12}
+   tool                              loops     <=5%    <=10%    <=20%     MAPE
+   uiCA ICX (before)                  1867    70.4%    85.6%    98.2%     3.7%
+   uiCA ICX (after)                   1867    70.4%    85.6%    98.2%     3.7%
+   uiCA ICL (before)                  1867    66.3%    79.9%    94.1%     5.7%
+   uiCA ICL (after)                   1867    66.3%    79.9%    94.1%     5.7%
+   stock uiCA ICL                     1867    65.1%    78.7%    93.1%     6.3%
+   llvm-mca icelake-server            1867    42.2%    54.7%    71.0%    22.5%

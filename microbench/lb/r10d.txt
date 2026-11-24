@@ -1,0 +1,11 @@
+# round 10: vpermd count and spacing (independent vpermd, fillers between them)
+v_pd1: vpermd ymm0, ymm14, ymm15; dec rcx; jne .L
+v_pd1n4: vpermd ymm0, ymm14, ymm15; nop; nop; nop; nop; dec rcx; jne .L
+v_pd2: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; dec rcx; jne .L
+v_pd2sn: vpermd ymm0, ymm14, ymm15; nop; nop; nop; vpermd ymm1, ymm14, ymm15; nop; nop; nop; dec rcx; jne .L
+v_pd2sa: vpermd ymm0, ymm14, ymm15; vaddps ymm4, ymm14, ymm15; vaddps ymm5, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vaddps ymm6, ymm14, ymm15; vaddps ymm7, ymm14, ymm15; dec rcx; jne .L
+v_pd4: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vpermd ymm2, ymm14, ymm15; vpermd ymm3, ymm14, ymm15; dec rcx; jne .L
+v_pd4sn: vpermd ymm0, ymm14, ymm15; nop; nop; vpermd ymm1, ymm14, ymm15; nop; nop; vpermd ymm2, ymm14, ymm15; nop; nop; vpermd ymm3, ymm14, ymm15; nop; nop; dec rcx; jne .L
+v_pd4sa: vpermd ymm0, ymm14, ymm15; vaddps ymm8, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vaddps ymm9, ymm14, ymm15; vpermd ymm2, ymm14, ymm15; vaddps ymm10, ymm14, ymm15; vpermd ymm3, ymm14, ymm15; vaddps ymm11, ymm14, ymm15; dec rcx; jne .L
+v_pd8: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm14, ymm15; vpermd ymm2, ymm14, ymm15; vpermd ymm3, ymm14, ymm15; vpermd ymm4, ymm14, ymm15; vpermd ymm5, ymm14, ymm15; vpermd ymm6, ymm14, ymm15; vpermd ymm7, ymm14, ymm15; dec rcx; jne .L
+v_pd2r: vpermd ymm0, ymm14, ymm15; vpermd ymm1, ymm13, ymm12; dec rcx; jne .L
