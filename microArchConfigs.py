@@ -573,3 +573,7 @@ MicroArchConfigs['ADL-P'].schedulerQueues = (('0156B', 110), ('23A', 70), ('4789
 # Round 11 (ADL-P diagnosis, 14 probe pairs): the 2-cycle fast FP add/sub reaches another add/sub in 2 cycles but every other kind of
 # consumer (mul, FMA, max, min, cvt, logic, shuffle, integer add, blend) one cycle later
 MicroArchConfigs['ADL-P'].fastAddBypassDelay = 1
+# Round 11 (ADL-P diagnosis probes): a GPR load at an offset inside an older store forwards in 6 cycles ('mov [rsi+256], rax; add eax,
+# [rsi+260]': 7.0 per iteration); failing 16-byte loads of four 4-byte stores 17.0 / 34.0 / 68.0 cycles for 1 / 2 / 4 per iteration
+MicroArchConfigs['ADL-P'].storeForwardOverlap = True
+MicroArchConfigs['ADL-P'].storeForwardFailInterval = 17
