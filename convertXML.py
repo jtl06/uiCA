@@ -41,6 +41,12 @@ INSTR_CORRECTIONS = {
       'VROUNDSS (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 3}},
       'VROUNDSS (XMM, XMM, M32, I8)': {'lat': {('REG1', 'REG0'): 3}}, 'VROUNDSD (XMM, XMM, M64, I8)': {'lat': {('REG1', 'REG0'): 3}},
       'CVTPI2PD (XMM, M64)': {'TP': 3.0},
+      # perf, Ryzen 7 7735U (round 11, probes ones11: 8 dependent vpaddd after the compare): VEX compare-equal with the same register for all
+      # operands (all ones) does not depend on the register (2.45 cycles per iteration; dependent reference 9.0), as the legacy forms already
+      # are in the data (lat_SR); SOG 19h, 2.9.2 lists them as ones idioms
+      'VPCMPEQB (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQW (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQD (XMM, XMM, XMM)': {'lat_SR': 0},
+      'VPCMPEQQ (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQB (YMM, YMM, YMM)': {'lat_SR': 0}, 'VPCMPEQW (YMM, YMM, YMM)': {'lat_SR': 0},
+      'VPCMPEQD (YMM, YMM, YMM)': {'lat_SR': 0}, 'VPCMPEQQ (YMM, YMM, YMM)': {'lat_SR': 0},
       # perf, Ryzen 7 7735U (ZEN3 real-loop diagnosis, chains of 8 through each source): vinserti128/vinsertf128 1.73 (uops.info: 1),
       # vpbroadcastd ymm, xmm 1.72 (1), vextracti128/vextractf128 and vperm2i128/vperm2f128 3.53 (3), vpermq 6.55 (6); to the nearest cycle
       'VINSERTI128 (YMM, YMM, XMM, I8)': {'lat': {('REG1', 'REG0'): 2, ('REG2', 'REG0'): 2}},
