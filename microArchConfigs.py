@@ -14,7 +14,7 @@ class MicroArchConfig:
                 loadValueNumbering=False, microcodeOps=0, microcodeWidth=4, microcodeNextEntryOps=0, foldedShiftDelay=0, loadOpForwardDelay=None, rotateCarryRMWForwardDelay=None, domainBypassDelay=0, fpSchedulerSize=0, fpSchedulerPorts='', splitLoadCycles=0,
                 vecRegFileSize=None, gprRegFileSize=None, vecRegFreeDelay=0, gprRegFreeDelay=0, storeForwardOverlap=False, vectorStoreForwardDelay=None,
                 storeForwardFailInterval=0, branchPorts=None, fusedALUBranchPorts=None, amdBranchFusionRules=False,
-                moveElimBlockedSlots=(), lsdLineDelivery=False):
+                moveElimBlockedSlots=(), lsdLineDelivery=False, schedulerQueues=(), fastAddBypassDelay=0):
       self.name = name
       self.XEDName = XEDName # see obj/wkit/bin/xed -chip-check-list
       self.IQWidth = IQWidth # width of the instruction queue
@@ -150,6 +150,12 @@ class MicroArchConfig:
       # if True: a loop delivered by the loop stream detector is delivered at most one 64-byte line per cycle (the uops of the next
       # iterations enter the IDQ no earlier than one cycle per line of the previous delivery after it)
       self.lsdLineDelivery = lsdLineDelivery
+      # scheduler queues: ((ports, size), ...); a uop that waits in the scheduler counts toward the first queue whose ports contain the port
+      # it was assigned at issue; issue stops when a queue would not have room for a full issue group (as for RSWidth, which still caps all)
+      self.schedulerQueues = schedulerQueues
+      # if > 0: the result of a fast FP add/sub (ADDPS/PD/SS/SD, SUBPS/PD/SS/SD, also VEX) reaches a consumer that is not one of these this many
+      # cycles later
+      self.fastAddBypassDelay = fastAddBypassDelay
       self.sameRegMoveEliminated = sameRegMoveEliminated # whether 'mov eax, eax' etc. are eliminated (only used for the experimental configurations)
 
    @property

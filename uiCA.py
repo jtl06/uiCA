@@ -207,6 +207,11 @@ ROTATE_CARRY_RMW_RE = re.compile(r'^(RCL|RCR)[ _]') # see MicroArchConfig.rotate
 FOLDED_SHIFT_RE = re.compile(r'^(SHL|SHR|SAR|SAL|ROL|ROR|SHLX|SHRX|SARX|RORX)[ _]')
 
 # the additional latency of an instruction for a register whose value was computed by the renamer (MicroArchConfig.foldedShiftDelay)
+FAST_ADD_RE = re.compile(r'^V?(ADD|SUB)(PS|PD|SS|SD)[ _]') # see MicroArchConfig.fastAddBypassDelay
+
+def isFastAdd(instrStr):
+   return FAST_ADD_RE.match(instrStr) is not None
+
 def getFoldedInputDelay(instr, uArchConfig: MicroArchConfig):
    if FOLDED_SHIFT_RE.match(instr.instrStr):
       return uArchConfig.foldedShiftDelay
@@ -1103,9 +1108,16 @@ class Scheduler:
       self.dependentUops = dict() # uops that have an operand that is written by a non-executed uop
       self.allPortsList = list(allPorts[self.uArchConfig.name])
       self.hasPorts4And9 = ('4' in self.allPortsList) and ('9' in self.allPortsList)
+      self.queueOfPort = {p: i for i, (ports, _) in reversed(list(enumerate(uArchConfig.schedulerQueues))) for p in ports} # MicroArchConfig.schedulerQueues
+      self.queueCount = [0] * len(uArchConfig.schedulerQueues)
 
    def isFull(self):
-      return len(self.uops) + self.uArchConfig.issueWidth > self.uArchConfig.RSWidth
+      if len(self.uops) + self.uArchConfig.issueWidth > self.uArchConfig.RSWidth:
+         return True
+      for c, (_, size) in zip(self.queueCount, self.uArchConfig.schedulerQueues):
+         if c + self.uArchConfig.issueWidth > size:
+            return True
+      return False
 
    def cycle(self, clock, newUops):
       if clock in self.uopsReadyInCycle:
@@ -1164,6 +1176,9 @@ class Scheduler:
 
          uop.dispatched = clock
          self.uops.remove(uop)
+         q = self.queueOfPort.get(port)
+         if q is not None:
+            self.queueCount[q] -= 1
          if self.uArchConfig.fpSchedulerSize and (port in self.uArchConfig.fpSchedulerPorts):
             self.nFPUopsInScheduler -= 1
          uopsDispatched.append(uop)
@@ -1359,6 +1374,9 @@ class Scheduler:
             uop.actualPort = port
             self.portUsage[port] += 1
             self.uops.add(uop)
+            q = self.queueOfPort.get(port)
+            if q is not None:
+               self.queueCount[q] += 1
 
             if self.uArchConfig.fpSchedulerSize and (port in self.uArchConfig.fpSchedulerPorts):
                if self.fpNonSchedulingQueue or (self.nFPUopsInScheduler >= self.uArchConfig.fpSchedulerSize):
@@ -1398,6 +1416,9 @@ class Scheduler:
             dc = vectorDomain(uop.prop.instr.instrStr)
             if dp and dc and (dp != dc):
                r += self.uArchConfig.domainBypassDelay
+         if (self.uArchConfig.fastAddBypassDelay and (renInpOp.uop is not None) and (not renInpOp.uop.prop.isLoadUop)
+               and (not uop.prop.isStoreDataUop) and isFastAdd(renInpOp.uop.prop.instr.instrStr) and not isFastAdd(uop.prop.instr.instrStr)):
+            r += self.uArchConfig.fastAddBypassDelay
          if r > opReadyCycle:
             opReadyCycle = r
 
