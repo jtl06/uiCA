@@ -91,6 +91,45 @@ onset is gradual, not a step); zeroing idioms without an execution port (SOG 2.9
 dev -0.9, some loops became twice as slow, a side effect not understood). Not changed: the macro-op count of `mul
 m64` / `mulx r64, r64, m64` (measured 3, model 2; 3 would make them microcoded under the op-cache rule).
 
+**ICX in round 11** (1,029 development loops measured on the Xeon Gold 6314U; values from probes on that machine):
+
+| Step (ICX) | Commit | Source | Dev ≤10 % (per library) | per loop | MAPE |
+|---|---|---|---:|---:|---:|
+| round 10 | | | 65.2 % | 64.0 % | 10.3 % |
+| vector register file 176, free delay 10 (alone) | `1a89172` | window probes (onset 160 fillers; documented 224 registers is an upper bound) | 71.6 % | 70.7 % | 8.9 % |
+| store forwarding: overlap, ymm +1, failures 18 apart (alone) | `79ab878` | forwarding probes | 65.2 % | 63.9 % | 10.2 % |
+| moves in the 4th rename slot execute (alone) | `863df35` | 26 + 25 move-elimination probes | 69.1 % | 68.3 % | 9.7 % |
+| loops delivered one 64-byte line per cycle (alone) | `ba35f27` | offset probes, front-end probes | 67.0 % | 65.9 % | 9.7 % |
+| all four | | | 76.9 % | 76.4 % | 7.6 % |
+| + tables (SHA, blends, zmm loads/stores, merge latencies, double sqrt, zmm on p0/p5, VEX ones idiom) | `75a83b1`..`80b4254` | single-form loops, probes | 77.1 % | 76.8 % | 7.5 % |
+
+Guards (ICX, round 10 -> round 11): dev13 86.9 -> 86.8, dev11 87.5 -> 87.8, holdout5 86.6 -> 87.3, bhive1 89.0 -> 89.1, bhive3 88.4 -> 88.1;
+gate holdout7 85.8 -> 85.9, holdout8 85.6 -> 86.0, bhive5 89.7 -> 89.8, bhive6 88.2 -> 88.6.
+
+**ADL-P in round 11** (874 development loops measured on the Core i7-12650H P-core):
+
+| Step (ADL-P) | Commit | Source | Dev ≤10 % (per library) | per loop | MAPE |
+|---|---|---|---:|---:|---:|
+| round 10 | | | 78.7 % | 79.3 % | 7.0 % |
+| scheduler queues math 110 / loads 70 / stores 50 (alone) | `17a4590` | window probes (onsets 88-96 / 72 / 64) | 86.1 % | 86.6 % | 5.7 % |
+| fast add/sub +1 to other consumers (alone) | `91da3b6` | 14 probe pairs | 79.9 % | 80.5 % | 6.8 % |
+| store forwarding: overlap, failures 17 apart (alone) | `c56ee25` | forwarding probes | 78.7 % | 79.3 % | 6.9 % |
+| vector register file 264, free delay 10 (alone) | `bba7b99` | window probe | 80.2 % | 80.7 % | 6.6 % |
+| integer register file 232 (alone) | `e229a68` | window probe | 78.7 % | 79.3 % | 6.9 % |
+| VEX ones idiom; GPR -> vector moves 1 cycle (alone) | `b077dd3`, `c3bb556` | probes, round trips | 78.7 / 79.0 % | 79.3 / 79.6 % | 6.6 / 6.9 % |
+| all | | | 86.9 % | 87.4 % | 5.0 % |
+
+Guards (ADL-P, round 10 -> round 11): dev13 90.8 -> 90.9, dev11 90.4 -> 90.5, holdout5 91.8 (=), bhive1 91.8 (=), bhive3 91.9 -> 92.0;
+gate holdout7 90.9 (=), holdout8 90.7 -> 90.8, bhive5 92.6 -> 93.4 (MAPE 3.18 -> 3.90), bhive6 91.5 -> 92.1.
+
+All other configurations (the 12 Intel models and their variants) are byte-identical to round 10 in the fixture export; each CPU's
+round-11 changes leave the other two CPUs' frozen predictions identical. The VEX compare-equal ones idiom is dependency-breaking on all
+three machines (probes: ZEN3 2.45, ICX 3.2, ADL-P 3.0 cycles against 9.0 dependent); it is corrected for ICX and ADL-P, not for the frozen
+ZEN3.
+
+New generic parameters added after the ZEN3 part (off by default): `moveElimBlockedSlots`, `lsdLineDelivery`, `schedulerQueues`,
+`fastAddBypassDelay`; `INSTR_CORRECTIONS` also accepts `lat_SR` and `divC`.
+
 ## 3. Validation harness (`microbench/`)
 
 - `microbench/fuzz/`: random-loop generator, perf measurement, scoring (`fuzz_report.py`), held-out sets.
