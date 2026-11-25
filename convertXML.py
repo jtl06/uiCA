@@ -63,6 +63,12 @@ INSTR_CORRECTIONS = {
       'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 15}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 15},
       'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 15}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 15},
       'CMPXCHG8B (M64)': {'TP_MS': 13}, 'CMPXCHG16B (M128)': {'TP_MS': 16},
+      # perf, Core i7-12650H (round 11, probes ones11: 8 dependent vpaddd after the compare): VEX compare-equal with the same register
+      # for all operands (all ones) does not depend on the register (3.0 cycles per iteration; dependent reference 9.0), as the legacy
+      # forms already are in the data (lat_SR)
+      'VPCMPEQB (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQW (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQD (XMM, XMM, XMM)': {'lat_SR': 0},
+      'VPCMPEQQ (XMM, XMM, XMM)': {'lat_SR': 0}, 'VPCMPEQB (YMM, YMM, YMM)': {'lat_SR': 0}, 'VPCMPEQW (YMM, YMM, YMM)': {'lat_SR': 0},
+      'VPCMPEQD (YMM, YMM, YMM)': {'lat_SR': 0}, 'VPCMPEQQ (YMM, YMM, YMM)': {'lat_SR': 0},
       'SHA256RNDS2 (XMM, XMM)': {'lat': {('REG0', 'REG0'): 4}}, 'SHA256RNDS2 (XMM, M128)': {'lat': {('REG0', 'REG0'): 4}},
    },
    # perf, Xeon Gold 6314U (Rocket Lake data): (V)AESKEYGENASSIST 14 (12), CMPXCHG8B 13 (11); chains through the destination: SHA256RNDS2
