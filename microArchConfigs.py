@@ -562,3 +562,11 @@ MicroArchConfigs['ICX'].moveElimBlockedSlots = (3,)
 # the line delivery 2.01 on 12, 1.52 on one where only the last byte of the loop branch is in the next line). 72 front-end probes
 # (N long NOPs) are unchanged except two that touch a second line (2.00, 1.99; now 2.00, 2.00; before 1.50, 1.75).
 MicroArchConfigs['ICX'].lsdLineDelivery = True
+# Round 11 (perf, Core i7-12650H, window probes of the ADL-P real-loop diagnosis: two 120-cycle chains separated by N fillers that wait
+# for the first chain): waiting ALU/vector uops, loads and store uops fill separate queues (onsets at 88 ALU and 96 vector fillers, 72 loads, 64
+# store-data uops; ALU and load fillers together 136; fillers that do not wait cost nothing up to 192). Each size puts the model's
+# onset on the measured one (the model counts the waiting uops of a queue, the chains' own included, and stops issue when a full
+# 6-uop group would not fit): 110 / 70 / 50. Commonly cited Golden Cove figures (97 math, 70 load, 38 store; not found in a primary
+# source) agree for loads; 97 starts the vector probe 8-16 fillers early (13-19 cycles too slow), 38 the store probe at 40 instead of 64.
+# RSWidth (205) stays as the overall cap.
+MicroArchConfigs['ADL-P'].schedulerQueues = (('0156B', 110), ('23A', 70), ('4789', 50))
