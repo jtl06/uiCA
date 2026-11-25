@@ -63,6 +63,11 @@ INSTR_CORRECTIONS = {
       'AESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 15}, 'AESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 15},
       'VAESKEYGENASSIST (XMM, XMM, I8)': {'TP_MS': 15}, 'VAESKEYGENASSIST (XMM, M128, I8)': {'TP_MS': 15},
       'CMPXCHG8B (M64)': {'TP_MS': 13}, 'CMPXCHG16B (M128)': {'TP_MS': 16},
+      # perf, Core i7-12650H (ADL-P real-loop diagnosis, round trips): a move from a general-purpose to a vector register takes 1 cycle
+      # (uops.info: <= 3); every round trip measured fits it (movd xmm, r32 + movd r32, xmm: 4 cycles; vpmovmskb + vmovd: 5; vpextrq +
+      # vmovq: 5)
+      'MOVD (XMM, R32)': {'lat': {('REG1', 'REG0'): 1}}, 'MOVQ (XMM, R64)': {'lat': {('REG1', 'REG0'): 1}},
+      'VMOVD (XMM, R32)': {'lat': {('REG1', 'REG0'): 1}}, 'VMOVQ (XMM, R64)': {'lat': {('REG1', 'REG0'): 1}},
       # perf, Core i7-12650H (round 11, probes ones11: 8 dependent vpaddd after the compare): VEX compare-equal with the same register
       # for all operands (all ones) does not depend on the register (3.0 cycles per iteration; dependent reference 9.0), as the legacy
       # forms already are in the data (lat_SR)
