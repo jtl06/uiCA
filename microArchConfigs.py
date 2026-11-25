@@ -570,3 +570,6 @@ MicroArchConfigs['ICX'].lsdLineDelivery = True
 # source) agree for loads; 97 starts the vector probe 8-16 fillers early (13-19 cycles too slow), 38 the store probe at 40 instead of 64.
 # RSWidth (205) stays as the overall cap.
 MicroArchConfigs['ADL-P'].schedulerQueues = (('0156B', 110), ('23A', 70), ('4789', 50))
+# Round 11 (ADL-P diagnosis, 14 probe pairs): the 2-cycle fast FP add/sub reaches another add/sub in 2 cycles but every other kind of
+# consumer (mul, FMA, max, min, cvt, logic, shuffle, integer add, blend) one cycle later
+MicroArchConfigs['ADL-P'].fastAddBypassDelay = 1
