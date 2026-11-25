@@ -430,7 +430,7 @@ MicroArchConfigs['ZEN3'] = MicroArchConfig(
    fusiblePorts = 'ghi',
    dividerPort = 'a',
    loadLatency = 4, # SOG 19h, 2.12 (integer loads)
-   portNames = {'a': 'ALU0', 'b': 'ALU1', 'c': 'ALU2', 'd': 'ALU3', 'g': 'AGU0', 'h': 'AGU1', 'i': 'AGU2', 's': 'SD0', 't': 'SD1',
+   portNames = {'a': 'ALU0', 'b': 'ALU1', 'c': 'ALU2', 'd': 'ALU3', 'q': 'BR', 'g': 'AGU0', 'h': 'AGU1', 'i': 'AGU2', 's': 'SD0', 't': 'SD1',
                 'k': 'FP0', 'l': 'FP1', 'm': 'FP2', 'n': 'FP3', 'o': 'FP4', 'p': 'FP5', 'x': 'FPSt', 'y': '(SA0)', 'z': '(SA1)'},
 )
 
