@@ -583,3 +583,6 @@ MicroArchConfigs['ADL-P'].storeForwardFailInterval = 17
 # probe's onset.
 MicroArchConfigs['ADL-P'].vecRegFileSize = 264
 MicroArchConfigs['ADL-P'].vecRegFreeDelay = 10
+# Round 11 (ADL-P diagnosis, window probe: N 'lea r, [r13+r14]' fillers): slower from 192 fillers (127.2); 232 in-flight GPR writers put
+# the model's onset there (128.0; past it about 4 % low). Documented: 280 integer registers.
+MicroArchConfigs['ADL-P'].gprRegFileSize = 232
