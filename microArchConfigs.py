@@ -577,3 +577,9 @@ MicroArchConfigs['ADL-P'].fastAddBypassDelay = 1
 # [rsi+260]': 7.0 per iteration); failing 16-byte loads of four 4-byte stores 17.0 / 34.0 / 68.0 cycles for 1 / 2 / 4 per iteration
 MicroArchConfigs['ADL-P'].storeForwardOverlap = True
 MicroArchConfigs['ADL-P'].storeForwardFailInterval = 17
+# Round 11 (ADL-P diagnosis, window probe: N vpaddd xmm fillers between two 120-cycle chains): flat to 224, 126.2 at 240, a jump to 147.0 at
+# 256, then about 0.25 per filler. 264 in-flight vector writers with the ZEN3/ICX free delay of 10 cycles reproduce it (mean error about
+# 3 %; without the delay about 6 %, the jump missing). Documented: 332 vector registers (Intel's figure for Golden Cove); 264 is the
+# probe's onset.
+MicroArchConfigs['ADL-P'].vecRegFileSize = 264
+MicroArchConfigs['ADL-P'].vecRegFreeDelay = 10
